@@ -32,9 +32,13 @@ includes(minimaxModels, "MiniMax-M2.5");
 includes(minimaxModels, "MiniMax-M1");
 
 const openaiPackage = allVendorPresets.find((preset) => preset.id === "openai-package") ?? null;
+const openaiApi = allVendorPresets.find((preset) => preset.id === "openai") ?? null;
 const officialCodexModels = filterProviderModelCandidates(
   [
+    "gpt-6-luna",
     "gpt-5.3-codex-spark",
+    "gpt-6-sol",
+    "gpt-6-astra",
     "gpt-5.6-luna",
     "gpt-5.4-mini",
     "gpt-5.5",
@@ -46,8 +50,11 @@ const officialCodexModels = filterProviderModelCandidates(
 );
 equal(
   officialCodexModels.join(","),
-  "gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.3-codex-spark",
+  "gpt-6-astra,gpt-6-sol,gpt-6-luna",
 );
+excludes(officialCodexModels, "gpt-5.6-sol");
+equal(filterProviderModelCandidates(["gpt-5.5"], openaiPackage).length, 0);
+equal(filterProviderModelCandidates(["gpt-5.5"], openaiApi).length, 0);
 
 const openrouter = allVendorPresets.find((preset) => preset.id === "openrouter") ?? null;
 equal(isAggregatorPreset(openrouter), true);

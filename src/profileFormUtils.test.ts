@@ -51,14 +51,14 @@ const emptyAddForm = createEmptyAddForm();
 equal(emptyAddForm.hide_think_blocks, true);
 equal(emptyAddForm.supports_1m_context, true);
 equal(emptyAddForm.vision_profile_id, "");
-equal(openaiPackagePreset.models.includes("gpt-5.6-sol"), true);
-equal(openaiPackagePreset.models.includes("gpt-5.6-terra"), true);
+equal(openaiPackagePreset.models.join(","), "gpt-6-astra,gpt-6-sol,gpt-6-luna");
+equal(openaiPackagePreset.models.some((model) => model.startsWith("gpt-5")), false);
 
 const codexProxySlotProfile = codexProfile({
   id: "codex-proxy-slot-profile",
   display_name: "DeepSeek",
   compat_mode: "proxy",
-  model: "gpt-5.6-sol",
+  model: "gpt-6-astra",
   models: ["deepseek-v4-pro", "deepseek-v4-flash"],
 });
 equal(formFromProfile(codexProxySlotProfile, null, "codex").model, "deepseek-v4-pro");

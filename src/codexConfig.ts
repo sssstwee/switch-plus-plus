@@ -453,9 +453,9 @@ export function getCodexConfigOptionSupport(
     presetName?: string | null;
   },
 ): CodexConfigOptionSupport {
-  const isGpt6Astra = /(^|[/:-])gpt-6-astra$/i.test(context.model);
-  const isGptReasoningModel = isGpt6Astra || /(^|[/:-])gpt-5/i.test(context.model);
-  const prefersModelDefaultReasoning = isGpt6Astra || /(^|[/:-])gpt-5\.6-(sol|terra|luna)$/i.test(context.model);
+  const isGpt6Model = /(^|[/:-])gpt-6-(astra|sol|luna)$/i.test(context.model);
+  const isGptReasoningModel = isGpt6Model || /(^|[/:-])gpt-5/i.test(context.model);
+  const prefersModelDefaultReasoning = /(^|[/:-])gpt-6-astra$/i.test(context.model) || /(^|[/:-])gpt-5\.6-(sol|terra|luna)$/i.test(context.model);
   const usesNativeResponses = context.connectionMode === "official" || context.compatMode === "direct";
   const presetName = context.presetName || "当前厂商";
   const confirmedOpenAiResponses = context.connectionMode === "official" || context.presetId === "openai" || context.presetId === "openai-package";

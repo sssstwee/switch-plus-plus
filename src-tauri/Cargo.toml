@@ -1,6 +1,6 @@
 [package]
 name = "switch-plus-plus"
-version = "1.0.17"
+version = "1.0.18"
 description = "Switch++ cross-platform third-party model config center"
 authors = ["sssstwee"]
 license-file = "../LICENSE"

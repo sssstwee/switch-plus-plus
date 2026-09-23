@@ -81,7 +81,7 @@ includes(
 
 includes(
   buildCodexConfigTomlTemplate(baseCodexForm),
-  'model = "gpt-5.6-sol"',
+  'model = "gpt-6-astra"',
 );
 
 excludes(
@@ -123,7 +123,7 @@ const openAiLoginCodexConfig = buildCodexConfigTomlTemplate({
   display_name: "OpenAI API",
   base_url: "https://api.openai.com/v1",
   api_key: "",
-  model: "gpt-5.5",
+  model: "gpt-6-astra",
   compat_mode: "direct",
   codex_config_options: {
     ...defaultCodexConfigOptions,
@@ -217,11 +217,11 @@ includes(
     description: string;
     isDefault?: boolean;
   }>;
-  const primarySlot = models.find((model) => model.slug === "gpt-5.6-sol");
-  const terraSlot = models.find((model) => model.slug === "gpt-5.6-terra");
-  const lunaSlot = models.find((model) => model.slug === "gpt-5.6-luna");
+  const primarySlot = models.find((model) => model.slug === "gpt-6-astra");
+  const solSlot = models.find((model) => model.slug === "gpt-6-sol");
+  const lunaSlot = models.find((model) => model.slug === "gpt-6-luna");
   equal(primarySlot?.display_name, "qwen3.6-plus");
-  equal(terraSlot?.display_name, undefined);
+  equal(solSlot?.display_name, undefined);
   equal(lunaSlot?.display_name, undefined);
   equal(primarySlot?.isDefault, true);
   equal(models.length, 1);
@@ -302,8 +302,9 @@ includes(
 {
   const directCatalog = JSON.parse(buildCodexModelCatalogPreview({ ...baseCodexForm, compat_mode: "direct" }));
   const slugs = (directCatalog.models as Array<{ slug: string }>).map((model) => model.slug);
-  equal(slugs.includes("gpt-5.6-sol"), false);
-  equal(slugs.includes("gpt-5.5"), false);
+  equal(slugs.includes("gpt-6-astra"), false);
+  equal(slugs.includes("gpt-6-sol"), false);
+  equal(slugs.includes("gpt-6-luna"), false);
   equal(slugs.includes("qwen3.6-plus"), true);
   includes(
     buildCodexConfigTomlTemplate({ ...baseCodexForm, compat_mode: "direct" }),

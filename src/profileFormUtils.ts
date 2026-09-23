@@ -173,6 +173,10 @@ export function cloneModelMap(modelMap: ModelMap | undefined, fallback = ""): Mo
 }
 
 const codexProxyModelSlots = new Set([
+  "gpt-6-astra",
+  "gpt-6-sol",
+  "gpt-6-luna",
+  // Keep recognizing slots stored by older profiles while presenting GPT-6 choices.
   "gpt-5.6-sol",
   "gpt-5.6-terra",
   "gpt-5.6-luna",

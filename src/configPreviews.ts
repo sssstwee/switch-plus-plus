@@ -257,15 +257,11 @@ function primaryGatewayModel(form: AddForm) {
   return form.model || form.model_map.main || "gpt-6-astra";
 }
 
-const CODEX_PROXY_MODEL_SLOT_PRIMARY = "gpt-5.6-sol";
+const CODEX_PROXY_MODEL_SLOT_PRIMARY = "gpt-6-astra";
 const CODEX_PROXY_MODEL_SLOTS = [
-  "gpt-5.6-sol",
-  "gpt-5.6-terra",
-  "gpt-5.6-luna",
-  "gpt-5.5",
-  "gpt-5.4",
-  "gpt-5.4-mini",
-  "gpt-5.3-codex-spark",
+  "gpt-6-astra",
+  "gpt-6-sol",
+  "gpt-6-luna",
 ] as const;
 const CODEX_PROVIDER_DISPLAY_NAME = "Switch++";
 
@@ -397,7 +393,7 @@ function codexCatalogContextWindowForModel(form: AddForm, model: string) {
   const label = `${form.display_name} ${form.note} ${form.base_url}`.toLowerCase();
   const supports1mContext = form.supports_1m_context ?? modelSupports1mContext(model);
   if (supports1mContext || label.includes("gemini")) return 1_000_000;
-  if (model.trim().toLowerCase().startsWith("gpt-5") || label.includes("openai")) return 400_000;
+  if (/^gpt-(?:5|6)(?:[.-]|$)/i.test(model.trim()) || label.includes("openai")) return 400_000;
   if (model.trim().toLowerCase().includes("claude") || label.includes("anthropic")) return 200_000;
   return 128_000;
 }
@@ -413,7 +409,7 @@ function codexGatewayModelCandidates(form: AddForm, extraModels?: string[]) {
       allModels.push(trimmed);
     }
   }
-  if (allModels.length === 0) allModels.push("gpt-5.4");
+  if (allModels.length === 0) allModels.push("gpt-6-astra");
   return allModels;
 }
 

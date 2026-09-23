@@ -57,13 +57,8 @@ export const claudeApiModels = [
 // https://developers.openai.com/api/docs/guides/latest-model
 export const openaiPackageModels = [
   "gpt-6-astra",
-  "gpt-5.6-sol",
-  "gpt-5.6-terra",
-  "gpt-5.6-luna",
-  "gpt-5.5",
-  "gpt-5.4",
-  "gpt-5.4-mini",
-  "gpt-5.3-codex-spark",
+  "gpt-6-sol",
+  "gpt-6-luna",
 ];
 
 export const customPreset: VendorPreset = {
@@ -108,7 +103,7 @@ export const openaiPackagePreset: VendorPreset = {
   api_format: "openai_responses",
   auth_field: "OPENAI_API_KEY",
   use_full_url: false,
-  note: "ChatGPT 套餐包含 Codex 时，使用本地 auth.json 与 config.toml，不需要手填 API Key；GPT-6 Astra 请使用最新版 Codex，模型可用性与额度按当前套餐控制",
+  note: "ChatGPT 套餐包含 Codex 时，使用本地 auth.json 与 config.toml，不需要手填 API Key；GPT-6 模型请使用最新版 Codex，模型可用性与额度按当前套餐控制",
   model_map: defaultModelMap("gpt-6-astra"),
   models: openaiPackageModels,
   group: "international",
@@ -139,7 +134,7 @@ const anthropicPackagePreset: VendorPreset = {
 
 const internationalPresets: VendorPreset[] = [
   openaiPackagePreset,
-  { id: "openai", name: "OpenAI API", description: "OpenAI API Key", website_url: "https://platform.openai.com", base_url: "https://api.openai.com/v1", request_url: "https://api.openai.com/v1", api_key_hint: "sk-proj-...", api_key_url: "https://platform.openai.com/api-keys", api_format: "openai_responses", auth_field: "OPENAI_API_KEY", use_full_url: false, note: "使用 OpenAI API Key 直接调用 Responses API；GPT-6 Astra 请使用最新版 Codex", model_map: defaultModelMap("gpt-6-astra"), models: openaiPackageModels, group: "international", supported_targets: ["codex"], codex_compat_mode: "direct", codex_support_status: "responses", codex_support_note: "OpenAI 官方 Codex 配置参考确认自定义 provider 当前只支持 Responses 协议。", codex_support_url: "https://developers.openai.com/codex/config-reference/", claude_desktop_supported: false, claude_desktop_support_note: "OpenAI API 可通过 Codex 调用。" },
+  { id: "openai", name: "OpenAI API", description: "OpenAI API Key", website_url: "https://platform.openai.com", base_url: "https://api.openai.com/v1", request_url: "https://api.openai.com/v1", api_key_hint: "sk-proj-...", api_key_url: "https://platform.openai.com/api-keys", api_format: "openai_responses", auth_field: "OPENAI_API_KEY", use_full_url: false, note: "使用 OpenAI API Key 直接调用 Responses API；GPT-6 模型请使用最新版 Codex", model_map: defaultModelMap("gpt-6-astra"), models: openaiPackageModels, group: "international", supported_targets: ["codex"], codex_compat_mode: "direct", codex_support_status: "responses", codex_support_note: "OpenAI 官方 Codex 配置参考确认自定义 provider 当前只支持 Responses 协议。", codex_support_url: "https://developers.openai.com/codex/config-reference/", claude_desktop_supported: false, claude_desktop_support_note: "OpenAI API 可通过 Codex 调用。" },
   { id: "xai", name: "xAI (Grok)", description: "xAI API · Responses / Chat Completions", website_url: "https://console.x.ai", base_url: "https://api.x.ai/v1", request_url: "https://api.x.ai/v1", api_key_hint: "xai-...", api_key_url: "https://console.x.ai/team/default/api-keys", api_format: "openai_responses", auth_field: "OPENAI_API_KEY", use_full_url: false, note: "xAI 官方 Responses API；默认使用最新 Grok 4.5", model_map: defaultModelMap("grok-4.5"), models: ["grok-4.5", "grok-build-0.1", "grok-4.3"], group: "international", supported_targets: ["codex", "grok_build"], codex_compat_mode: "direct", codex_support_status: "responses", codex_support_note: "xAI 官方 Quickstart 提供 OpenAI Responses API 接入，可由 Codex 和 Grok Build 直接使用。", codex_support_url: "https://docs.x.ai/developers/quickstart", claude_desktop_supported: false, claude_desktop_support_note: "xAI 官方公开的是 OpenAI-compatible API，未提供 Anthropic Messages 兼容端点。" },
   anthropicPackagePreset,
   { id: "anthropic", name: "Anthropic API", description: "Anthropic API Key", website_url: "https://console.anthropic.com", base_url: "https://api.anthropic.com", request_url: "https://api.anthropic.com", api_key_hint: "sk-ant-...", api_key_url: "https://console.anthropic.com/settings/keys", api_format: "anthropic", auth_field: "ANTHROPIC_API_KEY", use_full_url: false, note: "使用 Anthropic API Key 直接调用 Messages API", model_map: claudeApiModelMap, models: claudeApiModels, group: "international", supported_targets: ["claude_cli", "claude_desktop"], codex_support_status: "unconfirmed", codex_support_note: "Anthropic 原生 Messages API 不是 Codex 新版要求的 OpenAI Responses API。", codex_support_url: "https://platform.claude.com/docs/en/api/overview", claude_desktop_supported: true, claude_desktop_support_note: "Anthropic 原生模型可直接用于 Claude 桌面端。" },

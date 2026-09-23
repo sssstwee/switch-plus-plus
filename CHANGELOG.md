@@ -1,5 +1,29 @@
 # Changelog
 
+## v1.0.18 - 2026-09-23
+
+Switch++ 更新至 ChatGPT/Codex 当前 GPT-6 模型系列，默认使用 GPT-6 Astra，并支持 GPT-6 Sol 与 GPT-6 Luna。
+
+### 功能亮点 / Highlights
+
+- OpenAI 套餐与 API 配置仅保留官方当前 GPT-6 Astra、GPT-6 Sol、GPT-6 Luna 模型；旧 GPT-5.x 模型不再显示或作为回退选项。 / OpenAI plan and API configurations now expose only the current official GPT-6 Astra, GPT-6 Sol, and GPT-6 Luna models; older GPT-5.x models are no longer offered or used as fallbacks.
+- 更新 Codex 模型目录与 Responses 能力识别，并升级内置 CLIProxyAPI 至 `v7.3.15`，支持最新 GPT-6 模型目录。 / Updated the Codex model catalog and Responses capability detection, and upgraded bundled CLIProxyAPI to `v7.3.15` for the latest GPT-6 model catalog.
+
+### 界面预览 / Screenshots
+
+**Codex 配置 / Codex Configuration**
+
+![Codex 配置列表](https://raw.githubusercontent.com/sssstwee/switch-plus-plus/main/docs/assets/screenshots/switchpp-codex-profiles.png)
+
+### macOS 首次启动说明 / macOS First-Launch Notice
+
+Switch++ 尚未通过 Apple 公证（notarization），macOS 首次启动时可能会阻止。安装到 `/Applications` 后请运行：
+
+```bash
+sudo xattr -rd com.apple.quarantine "/Applications/Switch++.app"
+open "/Applications/Switch++.app"
+```
+
 ## v1.0.17 - 2026-09-05
 
 Switch++ 现在支持 GPT-6 Astra，并解决官方配置编辑页仍默认选中旧模型、GPT-6 推理选项在保存时被清理的问题。

@@ -224,11 +224,13 @@ export function filterProviderModelCandidates(
   limit = 30,
 ) {
   const unique = uniqueModels(models);
-  if (unique.length <= 1) return unique;
+  const isOpenAiPreset = preset?.id === "openai-package" || preset?.id === "openai";
+  if (unique.length <= 1 && !isOpenAiPreset) return unique;
 
-  if (preset?.id === "openai-package") {
+  if (isOpenAiPreset) {
     const modelOrder = new Map(preset.models.map((model, index) => [model.toLowerCase(), index]));
-    return [...unique]
+    return unique
+      .filter((model) => modelOrder.has(model.toLowerCase()))
       .sort((left, right) => {
         const orderDifference = (modelOrder.get(left.toLowerCase()) ?? modelOrder.size)
           - (modelOrder.get(right.toLowerCase()) ?? modelOrder.size);

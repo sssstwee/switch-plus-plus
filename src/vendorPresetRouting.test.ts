@@ -473,7 +473,7 @@ const openaiPackage = requiredPreset("openai-package");
 equal(openaiPackage.model_map.main, "gpt-6-astra");
 equal(
   openaiPackage.models.join(","),
-  "gpt-6-astra,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.3-codex-spark",
+  "gpt-6-astra,gpt-6-sol,gpt-6-luna",
 );
 
 function codexProfileForPresetForTest(preset: VendorPreset): CodexProfile {

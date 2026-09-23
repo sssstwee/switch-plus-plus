@@ -3918,7 +3918,7 @@ dependencies = [
 
 [[package]]
 name = "switch-plus-plus"
-version = "1.0.17"
+version = "1.0.18"
 dependencies = [
  "axum",
  "base64 0.22.1",
