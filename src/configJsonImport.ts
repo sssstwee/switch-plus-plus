@@ -203,9 +203,9 @@ export function formFromConfigJson(form: AddForm, raw: string): AddForm {
       ),
       max_thinking:
         (envString(env, "CLAUDE_CODE_EFFORT_LEVEL") ?? "").toLowerCase() === "max" ||
-        (parsed as { alwaysThinkingEnabled?: unknown }).alwaysThinkingEnabled === true ||
         (parsed as { effortLevel?: unknown }).effortLevel === "max" ||
         form.config_options.max_thinking,
+      reasoning_effort: envString(env, "CLAUDE_CODE_EFFORT_LEVEL") ?? (typeof parsed.effortLevel === "string" ? parsed.effortLevel : form.config_options.reasoning_effort),
       enable_prompt_caching_1h: envFlag(
         env,
         "ENABLE_PROMPT_CACHING_1H",

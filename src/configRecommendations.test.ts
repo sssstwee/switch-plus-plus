@@ -79,8 +79,8 @@ const toolSearchAdvice = getClaudeConfigOptionRecommendation({
   presetName: "阿里百炼",
 });
 
-equal(toolSearchAdvice.statusText, "建议勾选");
-equal(toolSearchAdvice.tone, "ok");
+equal(toolSearchAdvice.statusText, "按需勾选");
+equal(toolSearchAdvice.tone, "warn");
 
 const modelDiscoveryAdvice = getClaudeConfigOptionRecommendation({
   option: "enable_gateway_model_discovery",

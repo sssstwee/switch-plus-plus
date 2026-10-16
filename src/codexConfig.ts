@@ -1,4 +1,5 @@
 import type { RecommendationAdvice } from "./configRecommendations.ts";
+import { clientConfigSupport, modelCapability, modelReasoningEfforts, type CapabilityContext } from "./configCapabilities.ts";
 
 const codexConfigReferenceUrl = "https://developers.openai.com/codex/config-reference";
 const codexModelsUrl = "https://developers.openai.com/codex/models";
@@ -6,6 +7,7 @@ const codexModelsUrl = "https://developers.openai.com/codex/models";
 export type CodexOssProvider = "" | "ollama" | "lmstudio";
 
 export type CodexConfigOptions = {
+  reasoning_effort?: string;
   high_reasoning: boolean;
   detailed_reasoning_summary: boolean;
   force_reasoning_summaries: boolean;
@@ -30,7 +32,7 @@ export type CodexConfigOptions = {
   oss_provider: CodexOssProvider;
 };
 
-export type CodexConfigOptionKey = Exclude<keyof CodexConfigOptions, "oss_provider">;
+export type CodexConfigOptionKey = Exclude<keyof CodexConfigOptions, "oss_provider" | "reasoning_effort">;
 
 export type CodexConfigOptionItem = {
   key: CodexConfigOptionKey;
@@ -239,13 +241,15 @@ export function normalizeCodexConfigOptions(options?: Partial<CodexConfigOptions
   return next;
 }
 
-export function buildCodexConfigOptionTomlParts(options: CodexConfigOptions) {
+export function buildCodexConfigOptionTomlParts(options: CodexConfigOptions, clientVersion?: string) {
+  if (clientConfigSupport("codex", clientVersion)) return {topLevelLines: [] as string[], providerLines: [] as string[], sectionLines: [] as string[]};
   const safeOptions = withoutHiddenCodexConfigOptions(options);
   const topLevelLines: string[] = [];
   const providerLines: string[] = [];
   const sectionLines: string[] = [];
 
-  if (safeOptions.high_reasoning) topLevelLines.push('model_reasoning_effort = "high"');
+  const effort = safeOptions.reasoning_effort || (safeOptions.high_reasoning ? "high" : "");
+  if (/^(none|minimal|low|medium|high|xhigh|max|ultra)$/.test(effort)) topLevelLines.push(`model_reasoning_effort = "${effort}"`);
   if (safeOptions.detailed_reasoning_summary) topLevelLines.push('model_reasoning_summary = "detailed"');
   if (safeOptions.low_verbosity) topLevelLines.push('model_verbosity = "low"');
   if (safeOptions.show_raw_reasoning) topLevelLines.push("show_raw_agent_reasoning = true");
@@ -261,10 +265,10 @@ export function buildCodexConfigOptionTomlParts(options: CodexConfigOptions) {
   if (safeOptions.workspace_network_access) {
     sectionLines.push("", "[sandbox_workspace_write]", "network_access = true");
   }
-  if (safeOptions.enable_memories || safeOptions.enable_goals || safeOptions.prevent_idle_sleep) {
+  if (safeOptions.enable_memories || safeOptions.enable_goals !== undefined || safeOptions.prevent_idle_sleep) {
     sectionLines.push("", "[features]");
     if (safeOptions.enable_memories) sectionLines.push("memories = true");
-    if (safeOptions.enable_goals) sectionLines.push("goals = true");
+    sectionLines.push(`goals = ${Boolean(safeOptions.enable_goals)}`);
     if (safeOptions.prevent_idle_sleep) sectionLines.push("prevent_idle_sleep = true");
   }
 
@@ -420,9 +424,9 @@ function insertSectionTomlLines(lines: string[], sectionName: string, sectionLin
   return next;
 }
 
-export function mergeCodexConfigOptionsIntoToml(toml: string, options: CodexConfigOptions) {
+export function mergeCodexConfigOptionsIntoToml(toml: string, options: CodexConfigOptions, clientVersion?: string) {
   const normalizedToml = toml.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trimEnd();
-  const optionParts = buildCodexConfigOptionTomlParts(options);
+  const optionParts = buildCodexConfigOptionTomlParts(options, clientVersion);
   const originalLines = normalizedToml ? normalizedToml.split("\n") : [];
   const activeProvider = activeModelProviderId(originalLines);
   let lines = removeManagedCodexTomlLines(originalLines, activeProvider);
@@ -445,7 +449,7 @@ export function mergeCodexConfigOptionsIntoToml(toml: string, options: CodexConf
 
 export function getCodexConfigOptionSupport(
   option: CodexConfigOptionItem,
-  context: {
+  context: CapabilityContext & {
     model: string;
     compatMode: "direct" | "proxy";
     connectionMode: "official" | "gateway";
@@ -453,6 +457,18 @@ export function getCodexConfigOptionSupport(
     presetName?: string | null;
   },
 ): CodexConfigOptionSupport {
+  const unsupported = (detail: string): CodexConfigOptionSupport => ({ supported: false, statusText: "未确认支持", tone: "muted", recommendation: detail, detail, source: {label: "Codex 官方配置及当前模型能力", url: codexConfigReferenceUrl} });
+  const versionIssue = clientConfigSupport("codex", context.clientVersion);
+  if (versionIssue) return unsupported(versionIssue);
+  if (option.key === "high_reasoning" && context.metadata?.some((entry) => entry.id === context.model)) {
+    const supported = (context.apiFormat === "openai_responses" || context.compatMode === "direct" || context.connectionMode === "official") && modelReasoningEfforts(context).includes("high");
+    return supported ? {supported: true, statusText: "按模型选择", tone: "warn", recommendation: "按官网返回的推理档位选择；默认沿用模型默认值。", detail: "当前模型的实时能力优先于厂商预设。", source: {label: "当前模型能力", url: codexConfigReferenceUrl}} : unsupported("当前模型或接入协议未确认支持 high 推理档位。");
+  }
+  const capability = ({ detailed_reasoning_summary: "reasoning_summary", low_verbosity: "verbosity", enable_web_search: "web_search" } as Record<string, string>)[option.key];
+  if (capability && modelCapability(context, capability) === false) return unsupported("当前模型的能力信息不支持该参数。");
+  if (capability && context.metadata?.find((entry) => entry.id === context.model)?.capabilities?.[capability] === true && (context.apiFormat === "openai_responses" || context.connectionMode === "official")) {
+    return {supported: true, statusText: "按需勾选", tone: "warn", recommendation: "当前模型明确声明支持；按需要开启。", detail: "依据当前模型能力和 Responses 接入协议。", source: {label: "当前模型能力", url: codexConfigReferenceUrl}};
+  }
   const isGpt6Model = /(^|[/:-])gpt-6(?:\.\d+)*-(astra|sol|luna)$/i.test(context.model);
   const isGptReasoningModel = isGpt6Model || /(^|[/:-])gpt-5/i.test(context.model);
   const prefersModelDefaultReasoning = /(^|[/:-])gpt-6-astra$/i.test(context.model) || /(^|[/:-])gpt-5\.6-(sol|terra|luna)$/i.test(context.model);

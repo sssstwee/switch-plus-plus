@@ -9,6 +9,7 @@ export const nativeCommand = {
   syncCodexProfile: "sync_codex_profile",
   restartTargetApp: "restart_target_app",
   discoverProviderModels: "discover_provider_models",
+  getClientConfigContext: "get_client_config_context",
   readClaudeCodeSettings: "read_claude_code_settings",
   readClaudeDesktopConfigFiles: "read_claude_desktop_config_files",
   codexProxyStatus: "codex_proxy_status",

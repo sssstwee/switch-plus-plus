@@ -17,6 +17,7 @@ import {
 import { sanitizeClaudeConfigOptionsForStableExperience } from "./gatewayConfigOptions.ts";
 import { isAsciiHeaderValue, isOfficialAnthropicBaseUrl, modelSupports1mContext } from "./gatewayProfile.ts";
 import { claudeDesktopGatewayModelMap, claudeDesktopGatewayModels } from "./vendorPresets.ts";
+import { allowedReasoningEfforts, capabilityContextForForm, claudeModelCapabilities } from "./configCapabilities.ts";
 
 // Re-export for backward compatibility — consumers should prefer appConstants.ts directly.
 export { CODEX_LOCAL_PROXY_BASE_URL } from "./appConstants.ts";
@@ -393,7 +394,10 @@ export function buildCodexModelCatalogPreview(form: AddForm, extraModels?: strin
       } : {}),
       ...(liveContext ? {context_window: liveContext, max_context_window: liveContext, auto_compact_token_limit: Math.floor(liveContext * 0.8)} : {}),
       ...(live?.input_modalities.length ? {input_modalities: live.input_modalities.filter((value) => value === "text" || value === "image")} : {}),
-      ...(live?.reasoning_efforts?.length ? {supported_reasoning_levels: live.reasoning_efforts.map((effort) => ({effort, description: effort}))} : {}),
+      ...(live?.capabilities?.effort === false ? {supported_reasoning_levels: []} : live?.reasoning_efforts?.length ? {supported_reasoning_levels: live.reasoning_efforts.map((effort) => ({effort, description: effort}))} : {}),
+      ...(live?.capabilities?.reasoning_summary != null ? {supports_reasoning_summaries: live.capabilities.reasoning_summary} : {}),
+      ...(live?.capabilities?.verbosity != null ? {support_verbosity: live.capabilities.verbosity} : {}),
+      ...(live?.capabilities?.web_search != null ? {supports_search_tool: live.capabilities.web_search} : {}),
       ...(live?.default_reasoning ? {default_reasoning_level: live.default_reasoning} : {}),
     };
   });
@@ -410,18 +414,22 @@ export function sanitizeCodexConfigOptionsForForm(form: AddForm, preset: VendorP
       connectionMode: form.connection_mode,
       presetId: preset?.id,
       presetName: preset?.name,
+      metadata: form.model_metadata, apiFormat: form.api_format, clientVersion: form.client_version,
     });
     if (!support.supported) {
       next[option.key] = false;
     }
   }
+  const effort = next.reasoning_effort || (next.high_reasoning ? "high" : "");
+  next.reasoning_effort = allowedReasoningEfforts("codex", capabilityContextForForm(form, "codex")).includes(effort) ? effort : "";
+  next.high_reasoning = false;
   return next;
 }
 
 export function buildCodexConfigTomlTemplate(form: AddForm, preset: VendorPreset | null = null) {
   const providerId = "custom";
   const model = codexClientModel(form);
-  const optionParts = buildCodexConfigOptionTomlParts(sanitizeCodexConfigOptionsForForm(form, preset));
+  const optionParts = buildCodexConfigOptionTomlParts(sanitizeCodexConfigOptionsForForm(form, preset), form.client_version);
   const compatComment = codexGatewayCompatComment(form);
   const isNativeVendor = !codexFormUsesProxy(form)
     && (preset?.id === "deepseek" || preset?.id.startsWith("minimax") || preset?.id.startsWith("zai-coding"));
@@ -452,8 +460,7 @@ export function buildCodexConfigTomlTemplate(form: AddForm, preset: VendorPreset
     ...(isNativeVendor ? [
       "",
       "[desktop]",
-      `enabled-reasoning-efforts = ${model.startsWith("MiniMax-")
-        ? '["low", "medium", "high", "xhigh", "max"]' : '["low", "high", "max"]'}`,
+      `enabled-reasoning-efforts = [${allowedReasoningEfforts("codex", capabilityContextForForm(form, "codex")).map((level) => JSON.stringify(level)).join(", ")}]`,
     ] : []),
   ].join("\n");
 }
@@ -561,10 +568,12 @@ export function buildGatewayConfigPreview(form: AddForm, target: TargetKey = "cl
   }
 
   if (!isOfficialPackage && configOptions.declare_model_capabilities) {
-    const capabilities = "effort,xhigh_effort,max_effort,thinking,adaptive_thinking,interleaved_thinking";
-    env.ANTHROPIC_DEFAULT_HAIKU_MODEL_SUPPORTED_CAPABILITIES = capabilities;
-    env.ANTHROPIC_DEFAULT_SONNET_MODEL_SUPPORTED_CAPABILITIES = capabilities;
-    env.ANTHROPIC_DEFAULT_OPUS_MODEL_SUPPORTED_CAPABILITIES = capabilities;
+    for (const role of ["haiku", "sonnet", "opus"] as const) {
+      const capabilities = claudeModelCapabilities({...capabilityContextForForm(form, "claude_cli"), model: form.model_map[role]});
+      if (capabilities.length) env[`ANTHROPIC_DEFAULT_${role.toUpperCase()}_MODEL_SUPPORTED_CAPABILITIES`] = capabilities.join(",");
+    }
+    const customCapabilities = claudeModelCapabilities(capabilityContextForForm(form, "claude_cli"));
+    if (configOptions.enable_custom_model_option && customCapabilities.length) env.ANTHROPIC_CUSTOM_MODEL_OPTION_SUPPORTED_CAPABILITIES = customCapabilities.join(",");
   }
 
   if (configOptions.disable_experimental_betas) {
@@ -596,9 +605,10 @@ export function buildGatewayConfigPreview(form: AddForm, target: TargetKey = "cl
     env.CLAUDE_CODE_DISABLE_THINKING = "1";
   }
 
-  if (configOptions.max_thinking) {
-    env.CLAUDE_CODE_EFFORT_LEVEL = "max";
-    settings.alwaysThinkingEnabled = true;
+  const effort = configOptions.reasoning_effort || (configOptions.max_thinking ? "max" : "");
+  if (allowedReasoningEfforts("claude_cli", capabilityContextForForm(form, "claude_cli")).includes(effort)) {
+    env.CLAUDE_CODE_EFFORT_LEVEL = effort;
+    if (claudeModelCapabilities(capabilityContextForForm(form, "claude_cli")).includes("thinking")) settings.alwaysThinkingEnabled = true;
   }
 
   if (configOptions.enable_prompt_caching_1h) {

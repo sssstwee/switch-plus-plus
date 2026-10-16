@@ -92,13 +92,13 @@ export function getCodexThinkOutputAdvice(input: CodexThinkAdviceInput): CodexTh
 }
 
 const recommendedClaudeGatewayOptions = new Set([
-  "enable_tool_search",
   "api_timeout_long",
   "auto_compact",
   "compact_early",
 ]);
 
 const optionalClaudeOptions = new Set([
+  "enable_tool_search",
   "enable_gateway_model_discovery",
   "enable_custom_model_option",
   "declare_model_capabilities",

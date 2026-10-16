@@ -1,0 +1,52 @@
+import { deepEqual, equal, match } from "node:assert/strict";
+import { allowedReasoningEfforts, claudeModelCapabilities, clientConfigSupport, mergeModelCapabilities, modelCapability } from "./configCapabilities.ts";
+import { createEmptyAddForm } from "./profileFormUtils.ts";
+import { allVendorPresets } from "./vendorPresets.ts";
+import { getConfigOptionSupport, sanitizeGatewayConfigOptionsForForm } from "./gatewayConfigOptions.ts";
+import { buildCodexConfigOptionTomlParts, defaultCodexConfigOptions } from "./codexConfig.ts";
+import { buildGatewayConfigPreview, sanitizeCodexConfigOptionsForForm } from "./configPreviews.ts";
+import type { ProviderModel } from "./appTypes.ts";
+
+const model: ProviderModel = {id: "deepseek-flash", name: "Current Flash", input_modalities: ["text", "image"], reasoning_efforts: ["low", "max"], capabilities: {thinking: true, interleaved_thinking: false, tool_search: false}};
+const context = {model: model.id, metadata: [model], apiFormat: "anthropic" as const, clientVersion: "2.1.185 (Claude Code)"};
+deepEqual(allowedReasoningEfforts("claude_cli", context), ["low", "max"]);
+deepEqual(claudeModelCapabilities(context), ["effort", "max_effort", "thinking"]);
+equal(modelCapability({...context, metadata: [{...model, capabilities: {thinking: false}}]}, "thinking"), false);
+deepEqual(allowedReasoningEfforts("claude_cli", {...context, metadata: [{...model, capabilities: {effort: false}}]}), []);
+deepEqual(allowedReasoningEfforts("claude_cli", {...context, model: "unknown-next-model", metadata: []}), []);
+deepEqual(allowedReasoningEfforts("claude_cli", {...context, apiFormat: "openai_chat"}), []);
+deepEqual(allowedReasoningEfforts("codex", {...context, apiFormat: "openai_responses", clientVersion: "codex-cli 0.163.0"}), ["low", "max"]);
+equal(clientConfigSupport("codex", "codex-cli 0.163.0"), null);
+match(clientConfigSupport("codex", "0.100.0")!, /早于已验证/);
+match(clientConfigSupport("claude_desktop", "")!, /未检测到/);
+deepEqual(allowedReasoningEfforts("claude_cli", {...context, metadata: [{...model, reasoning_efforts: ["low", "ultra"]}]}), ["low"]);
+
+const preset = allVendorPresets.find((entry) => entry.id === "deepseek")!;
+equal(getConfigOptionSupport("enable_tool_search", preset, context).supported, false);
+equal(getConfigOptionSupport("enable_tool_search", preset, {...context, metadata: [{...model, capabilities: {tool_search: true}}]}).supported, true);
+equal(getConfigOptionSupport("enable_tool_search", preset, {...context, metadata: [{...model, capabilities: {tool_search: true}}], apiFormat: "openai_chat"}).supported, false);
+equal(getConfigOptionSupport("disable_prompt_suggestions", preset, context).supported, false);
+equal(getConfigOptionSupport("disable_prompt_suggestions", preset, {...context, clientVersion: "2.1.301"}).supported, true);
+equal(getConfigOptionSupport("enable_prompt_caching_1h", allVendorPresets.find((entry) => entry.id === "anthropic")!, {...context, metadata: [{...model, capabilities: {prompt_cache_1h: false}}]}).supported, false);
+deepEqual(claudeModelCapabilities({...context, model: "deepseek-flash[1m]"}), ["effort", "max_effort", "thinking"]);
+
+const form = {...createEmptyAddForm(), model: model.id, model_map: {main: model.id, opus: model.id, sonnet: "future-no-capabilities", haiku: model.id}, model_metadata: [model], client_version: "2.1.185", config_options: {...createEmptyAddForm().config_options, enable_tool_search: true, declare_model_capabilities: true, reasoning_effort: "max"}};
+const safe = sanitizeGatewayConfigOptionsForForm(form, "claude_cli", preset);
+equal(safe.enable_tool_search, false);
+equal(safe.reasoning_effort, "max");
+equal(sanitizeGatewayConfigOptionsForForm({...form, config_options: {...form.config_options, reasoning_effort: "", max_thinking: true}}, "claude_cli", preset).reasoning_effort, "max");
+const preview = JSON.parse(buildGatewayConfigPreview({...form, config_options: safe}));
+equal(preview.env.CLAUDE_CODE_EFFORT_LEVEL, "max");
+equal(preview.env.ANTHROPIC_DEFAULT_SONNET_MODEL_SUPPORTED_CAPABILITIES, undefined);
+equal(preview.env.ANTHROPIC_DEFAULT_HAIKU_MODEL_SUPPORTED_CAPABILITIES, "effort,max_effort,thinking");
+equal(preview.env.ENABLE_TOOL_SEARCH, undefined);
+
+const codexForm = {...form, api_format: "openai_responses" as const, client_version: "0.163.0", codex_config_options: {...defaultCodexConfigOptions, reasoning_effort: "high", enable_goals: false}};
+const sanitized = sanitizeCodexConfigOptionsForForm(codexForm, preset);
+equal(sanitized.reasoning_effort, "");
+match(buildCodexConfigOptionTomlParts(sanitized).sectionLines.join("\n"), /goals = false/);
+const cache = [{...model, id: "future-official-model", reasoning_efforts: ["high", "max", "ultra"], capabilities: {reasoning_summary: true}}];
+const merged = mergeModelCapabilities([{id: "future-official-model", name: "Future", input_modalities: []}], cache);
+deepEqual(merged[0].reasoning_efforts, ["high", "max", "ultra"]);
+equal(modelCapability({model: "future-official-model", metadata: merged}, "reasoning_summary"), true);
+console.log("config capability tests passed");

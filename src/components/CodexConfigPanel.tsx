@@ -8,6 +8,7 @@ import type { CodexOssProvider } from "../codexConfig.ts";
 import { extractTomlAssignment } from "../gatewayProfile.ts";
 import { Tooltip } from "../nativeUi.tsx";
 import { CODEX_LOCAL_PROXY_BASE_URL } from "../configPreviews.ts";
+import { ReasoningEffortField } from "./ReasoningEffortField.tsx";
 
 type CodexConfigPanelProps = {
   isOfficialCodexDirect: boolean;
@@ -24,6 +25,7 @@ type CodexConfigPanelProps = {
   onCodexOssProviderChange: (value: CodexOssProvider) => void;
   onImportOfficialProfile: () => void;
   onApplyRecommended: () => void;
+  onReasoningEffortChange: (value: string) => void;
 };
 
 export function CodexConfigPanel({
@@ -41,6 +43,7 @@ export function CodexConfigPanel({
   onCodexOssProviderChange,
   onImportOfficialProfile,
   onApplyRecommended,
+  onReasoningEffortChange,
 }: CodexConfigPanelProps) {
   const codexPanelTitle = isOfficialCodexDirect ? "官方登录配置" : "Codex 生效预览";
 
@@ -124,14 +127,17 @@ export function CodexConfigPanel({
                 写入全局顶层 oss_provider，供 codex --oss 选择 Ollama 或 LM Studio；与当前 model_provider 和登录方式无关。
               </span>
             </div>
+            <span className="ccr-field-help">{addForm.client_version ? `已检测 Codex：${addForm.client_version}` : "正在确认本机 Codex 版本；未确认的选项暂不写入。"}</span>
+            <ReasoningEffortField target="codex" form={addForm} onChange={onReasoningEffortChange} />
             <div className="ccr-config-options">
-              {codexConfigOptionItems.map((option) => {
+              {codexConfigOptionItems.filter((option) => option.key !== "high_reasoning").map((option) => {
                 const support = getCodexConfigOptionSupport(option, {
                   model: addForm.model,
                   compatMode: addForm.compat_mode,
                   connectionMode: addForm.connection_mode,
                   presetId: currentSelectedPreset?.id,
                   presetName: currentSelectedPreset?.name,
+                  metadata: addForm.model_metadata, clientVersion: addForm.client_version, apiFormat: addForm.api_format,
                 });
                 return (
                   <Tooltip.Root key={option.key} delay={350}>

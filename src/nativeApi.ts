@@ -18,8 +18,10 @@ import type {
 } from "./appTypes.ts";
 import { invokeNative, nativeCommand } from "./nativeIpc.ts";
 import type { ProxyTargetKey } from "./proxyTargets.ts";
+import type { ClientConfigContext } from "./configCapabilities.ts";
 
 export const nativeApi = {
+  getClientConfigContext: () => invokeNative<ClientConfigContext>(nativeCommand.getClientConfigContext),
   loadAppState: () => invokeNative<AppState>(nativeCommand.loadAppState),
   saveAppState: (state: AppState) => invokeNative<AppState>(nativeCommand.saveAppState, { state }),
   applyTargetProfile: (target: TargetKey, profileId: string, state?: AppState) =>

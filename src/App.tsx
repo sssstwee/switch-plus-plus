@@ -1,4 +1,5 @@
 import { providerSetupHints, providerSetupValidation } from "./providerSetup.ts";
+import { mergeModelCapabilities, type ClientConfigContext } from "./configCapabilities.ts";
 import { listen } from "@tauri-apps/api/event";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import {
@@ -104,6 +105,7 @@ import {
   defaultGatewayConfigOptions,
   recommendedCodexConfigOptionsForForm,
   sanitizeConfigOptionsForPreset,
+  sanitizeGatewayConfigOptionsForForm,
   withRecommendedGatewayTargetConfigOptions,
   withRecommendedGatewayConfigOptions,
 } from "./gatewayConfigOptions.ts";
@@ -317,6 +319,7 @@ async function saveAndReapplySubscriptionProxyProfiles(
 }
 
 function App() {
+  const [clientConfigContext, setClientConfigContext] = useState<ClientConfigContext>({versions: {}, codex_models: []});
   const [state, setState] = useState<AppState | null>(null);
   const [stateLoadError, setStateLoadError] = useState("");
   const {
@@ -751,12 +754,17 @@ function App() {
   const currentModelMetadata = modelDiscoveryEndpoint ? discoveredModelDetails
     : savedEditingProfile?.base_url === addForm.base_url && savedEditingProfile?.api_key === addForm.api_key
       ? savedEditingProfile.model_metadata ?? [] : [];
+  const capabilityFormBase: AddForm = {
+    ...addForm,
+    client_version: clientConfigContext.versions[target] ?? "",
+    model_metadata: isCodexTarget(target) && (addForm.connection_mode === "official" || currentSelectedPreset?.id === "openai")
+      ? currentModelMetadata.length ? mergeModelCapabilities(currentModelMetadata, clientConfigContext.codex_models) : clientConfigContext.codex_models
+      : currentModelMetadata,
+  };
+  const capabilityForm: AddForm = {...capabilityFormBase, config_options: sanitizeGatewayConfigOptionsForForm(capabilityFormBase, target, currentSelectedPreset)};
 
-  const targetConfigPreview = useMemo(() => buildTargetConfigPreview(addForm, target), [addForm, target]);
-  const desktopProfileConfigPreview = useMemo(
-    () => buildClaudeDesktopProfileConfigPreview(addForm, currentModelMetadata),
-    [addForm, currentModelMetadata],
-  );
+  const targetConfigPreview = buildTargetConfigPreview(capabilityForm, target);
+  const desktopProfileConfigPreview = buildClaudeDesktopProfileConfigPreview(capabilityForm, currentModelMetadata);
   const desktopMetaConfigPreview = useMemo(
     () => buildClaudeDesktopMetaConfigPreview(state, editingId, addForm),
     [addForm, editingId, state],
@@ -908,6 +916,11 @@ function App() {
   );
 
   const currentEnvPlatform = envResults?.platform ?? browserEnvPlatform();
+  useEffect(() => {
+    let cancelled = false;
+    void nativeApi.getClientConfigContext().then((context) => { if (!cancelled) setClientConfigContext(context); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [view, target, envCheckedAt]);
   const currentEnvPlatformLabel = envResults?.platform_label ?? envPlatformLabel(currentEnvPlatform);
   const licenseAccessAllowed = licenseControlsEnabled ? (licenseStatus?.access_allowed ?? false) : true;
   const effectiveView = licenseAccessAllowed ? view : "license_locked";
@@ -1992,7 +2005,7 @@ function App() {
 
   async function handleAddConfirm() {
     if (!state) return;
-    let formForSubmit = addForm;
+    let formForSubmit = capabilityForm;
     const editingProfile = editingId ? currentProfiles.find((profile) => profile.id === editingId) : undefined;
     const isEditMode = Boolean(editingProfile);
     let nextState = state;
@@ -2031,6 +2044,8 @@ function App() {
     }
 
     const name = formForSubmit.display_name.trim() || `${targetDisplayName(target)} ${Date.now().toString().slice(-4)}`;
+    formForSubmit = {...formForSubmit, model_metadata: capabilityForm.model_metadata, client_version: capabilityForm.client_version};
+    if (!isCodexTarget(target)) formForSubmit.config_options = sanitizeGatewayConfigOptionsForForm(formForSubmit, target, currentSelectedPreset);
     const resolvedDesktopModelMap = target === "claude_desktop" ? claudeDesktopGatewayModelMap : formForSubmit.model_map;
     const resolvedProviderModelMap = providerModelMapFallback(formForSubmit, currentSelectedPreset, target);
     const resolvedGatewayUpstreamModel =
@@ -2053,6 +2068,7 @@ function App() {
         ? mergeCodexConfigOptionsIntoToml(
             mergeCodexOfficialModelIntoToml(codexFormForSubmit.config_toml, codexFormForSubmit.model),
             sanitizeCodexConfigOptionsForForm(codexFormForSubmit, currentSelectedPreset),
+            codexFormForSubmit.client_version,
           )
         : buildCodexConfigTomlTemplate(codexFormForSubmit, currentSelectedPreset);
       const resolvedAuthJson = codexFormForSubmit.connection_mode === "official"
@@ -2072,7 +2088,7 @@ function App() {
       const savedMetadata = editingProfile && "model_metadata" in editingProfile
         && editingProfile.base_url === codexFormForSubmit.base_url && editingProfile.api_key === codexFormForSubmit.api_key
         ? editingProfile.model_metadata ?? [] : [];
-      const modelMetadata = (modelDiscoveryEndpoint ? discoveredModelDetails : savedMetadata)
+      const modelMetadata = (capabilityForm.model_metadata ?? savedMetadata)
         .filter((model) => codexProfileModels.includes(model.id));
       const catalogJson = codexFormForSubmit.connection_mode === "official"
         ? undefined
@@ -2542,9 +2558,10 @@ function App() {
   const codexConfigTomlValue = isOfficialCodexDirect
     ? mergeCodexConfigOptionsIntoToml(
         addForm.config_toml,
-        sanitizeCodexConfigOptionsForForm(addForm, currentSelectedPreset),
+        sanitizeCodexConfigOptionsForForm(capabilityForm, currentSelectedPreset),
+        capabilityForm.client_version,
       )
-    : buildCodexConfigTomlTemplate(addForm, currentSelectedPreset);
+    : buildCodexConfigTomlTemplate(capabilityForm, currentSelectedPreset);
   const targetConfigEditorLabel =
     "配置 JSON";
   const targetConfigOptionsLabel = isClaudeGatewayTarget(target)
@@ -2696,7 +2713,7 @@ function App() {
   function applyRecommendedCodexOptions() {
     setAddForm((form) => ({
       ...form,
-      codex_config_options: recommendedCodexConfigOptionsForForm(form, currentSelectedPreset),
+      codex_config_options: recommendedCodexConfigOptionsForForm({...capabilityForm, ...form, model_metadata: capabilityForm.model_metadata, client_version: capabilityForm.client_version}, currentSelectedPreset),
     }));
   }
 
@@ -2705,10 +2722,11 @@ function App() {
       <GatewayConfigOptionsPanel
         title={title}
         target={target}
+        form={capabilityForm}
         isOfficialAnthropicDirect={isOfficialAnthropicDirect}
         visibleConfigOptionItems={visibleConfigOptionItems}
         currentSelectedPreset={currentSelectedPreset}
-        configOptions={addForm.config_options}
+        configOptions={capabilityForm.config_options}
         onConfigOptionChange={(key, checked) =>
           setAddForm({
             ...addForm,
@@ -2719,6 +2737,7 @@ function App() {
           })
         }
         onApplyRecommended={applyRecommendedGatewayTargetOptions}
+        onReasoningEffortChange={(value) => setAddForm((form) => ({...form, config_options: {...form.config_options, reasoning_effort: value, max_thinking: false}}))}
       />
     );
   }
@@ -2751,7 +2770,8 @@ function App() {
         busy={busy}
         codexAuthJsonValue={codexAuthJsonValue}
         codexConfigTomlValue={codexConfigTomlValue}
-        addForm={addForm}
+        addForm={capabilityForm}
+        onReasoningEffortChange={(value) => setAddForm((form) => ({...form, codex_config_options: {...form.codex_config_options, reasoning_effort: value, high_reasoning: false}}))}
         currentSelectedPreset={currentSelectedPreset}
         onAuthJsonChange={(value) => setAddForm({ ...addForm, auth_json: value })}
         onConfigTomlChange={(value, model) => setAddForm({ ...addForm, config_toml: value, model })}

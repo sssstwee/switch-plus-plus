@@ -3,13 +3,14 @@ import {
   getClaudeConfigOptionRecommendation,
 } from "../configRecommendations.ts";
 import {
-  getConfigOptionSupport,
   getTargetConfigOptionSupport,
   recommendedClaudeDesktopConfigOptionKeys,
   recommendedClaudeGatewayConfigOptionKeys,
 } from "../gatewayConfigOptions.ts";
 import { isClaudeGatewayTarget } from "./gatewayHelpers.ts";
 import { Tooltip } from "../nativeUi.tsx";
+import { ReasoningEffortField } from "./ReasoningEffortField.tsx";
+import { capabilityContextForForm } from "../configCapabilities.ts";
 
 type ConfigOptionItem = {
   key: GatewayConfigOptionKey;
@@ -22,30 +23,34 @@ type ConfigOptionItem = {
 type GatewayConfigOptionsPanelProps = {
   title: string;
   target: TargetKey;
+  form: AddForm;
   isOfficialAnthropicDirect: boolean;
   visibleConfigOptionItems: ConfigOptionItem[];
   currentSelectedPreset: VendorPreset | null;
   configOptions: AddForm["config_options"];
   onConfigOptionChange: (key: GatewayConfigOptionKey, checked: boolean) => void;
   onApplyRecommended: () => void;
+  onReasoningEffortChange: (value: string) => void;
 };
 
 export function GatewayConfigOptionsPanel({
   title,
   target,
+  form,
   isOfficialAnthropicDirect,
   visibleConfigOptionItems,
   currentSelectedPreset,
   configOptions,
   onConfigOptionChange,
   onApplyRecommended,
+  onReasoningEffortChange,
 }: GatewayConfigOptionsPanelProps) {
   const isClaudeTarget = isClaudeGatewayTarget(target);
   const isClaudeDesktopTarget = target === "claude_desktop";
   const optionActionNote = isClaudeDesktopTarget
-    ? "按 Claude Desktop 经由本地网关的稳定体验自动勾选推荐项。"
+    ? "按应用版本选择原生设置；这些选项不依赖上游模型能力。"
     : isClaudeTarget
-    ? "按当前厂商和 Claude Code 支持情况自动勾选稳定项。"
+    ? "按应用版本、当前模型能力和接入协议选择；未确认的能力保持关闭。"
     : "按当前应用官方文档自动勾选稳定项。";
 
   return (
@@ -55,7 +60,7 @@ export function GatewayConfigOptionsPanel({
       </div>
       {isOfficialAnthropicDirect ? (
         <span className="ccr-field-help">
-          Anthropic API 模式不需要网关配置；这里只保留 Claude Code 本地行为和官方模型能力相关选项。
+          Anthropic API 模式不需要网关配置；这里只保留当前应用的本地行为和已确认的模型能力选项。
         </span>
       ) : null}
       {visibleConfigOptionItems.length === 0 ? (
@@ -75,11 +80,11 @@ export function GatewayConfigOptionsPanel({
               </button>
             </div>
           </div>
+          <span className="ccr-field-help">{form.client_version ? `已检测 ${isClaudeDesktopTarget ? "Claude Desktop" : "Claude Code"}：${form.client_version}` : "未检测到可验证的应用版本，请安装应用或刷新环境检查。"}</span>
+          {!isClaudeDesktopTarget ? <ReasoningEffortField target={target} form={form} onChange={onReasoningEffortChange} /> : null}
           <div className="ccr-config-options">
-            {visibleConfigOptionItems.map((option) => {
-              const support = isClaudeTarget
-                ? getConfigOptionSupport(option.key, currentSelectedPreset)
-                : getTargetConfigOptionSupport(option, target, currentSelectedPreset);
+            {visibleConfigOptionItems.filter((option) => option.key !== "max_thinking").map((option) => {
+              const support = getTargetConfigOptionSupport(option, target, currentSelectedPreset, capabilityContextForForm(form, target));
               const recommendation = isClaudeTarget
                 ? getClaudeConfigOptionRecommendation({
                     option: option.key,
@@ -111,7 +116,7 @@ export function GatewayConfigOptionsPanel({
                     !currentSelectedPreset?.id.includes("anthropic") &&
                     recommendedClaudeGatewayConfigOptionKeys.has(option.key)
                   : Boolean(option.recommended));
-              const statusText = support.supported ? "当前可用" : "当前厂商未确认支持，已置灰";
+              const statusText = support.supported ? "当前可用" : "当前组合未确认支持，已置灰";
 
               return (
                 <Tooltip.Root key={option.key} delay={350}>

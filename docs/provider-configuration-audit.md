@@ -43,3 +43,15 @@
 依据：[Claude Desktop 配置](https://claude.com/docs/third-party/claude-desktop/configuration)的 name/labelOverride 字段和[网关压缩要求](https://claude.com/docs/third-party/claude-desktop/gateway#context-window-and-compaction)。本机安装包源码校验补充了官网概述未说明的具体模型过滤行为。
 
 内部 `agentSwitch*`、`configOptions` 仍由 Switch++ 自己的状态保存，停止写入 Claude 配置。实际写入 `disableEssentialTelemetry`、`disableNonessentialTelemetry`、`inferenceStreamIdleTimeoutSec`；不再把 Claude Code 的 permissions 字段误报为 Desktop 已生效。切换配置后需完全退出并重新启动 Claude。
+
+## 参数选项补齐（v1.0.22）
+
+- 本机验证基线：Codex 0.163.0、Claude Code 2.1.185、Claude Desktop 2.42304.0。基线是本次验证版本，不代表各字段最早发布版本。已知要求更高版本的字段单独限制（如 Claude Code 的提示建议环境变量需要 2.1.238）。配置页读取已安装版本；不自动升级其他应用。
+- 实时能力与本机官方目录优先于已核实型号的内置说明。模型未公开具体能力时不推断支持；新型号没有说明时保留默认。能力获取不是账户调用权限的证明。
+- 推理强度使用当前模型的可用档位，与 API 协议和应用接受的值求交集；Claude Desktop 沿用自身模型选择器，不写 Claude Code 的 effort 环境变量。
+- Tool Search 需要上游正确处理 tool_reference；普通 Anthropic 兼容声明不能证明支持。三方路径缺少明确能力时不自动启用。1h 缓存及细粒度工具流同样不套用所有厂商。
+- Claude 的模型角色逐一声明已确认的 effort/thinking 能力，未知角色不补造声明。开启 thinking 与 max effort 分开处理。
+- 遥测、统计和署名保留用户偏好，不再作为接入稳定性的强制推荐。Desktop 流式等待只适用于网关连接。
+- 回归覆盖实时能力否定、未知模型、协议切换、旧版本、每角色声明、max/ultra 档位以及 Goal=false 的后端往返。发布后核对安装版实际预览和配置文件。
+
+依据：[Codex 配置](https://developers.openai.com/codex/config-reference)、[Claude Code 环境变量](https://code.claude.com/docs/en/env-vars)、[模型能力声明](https://code.claude.com/docs/en/model-config)、[Desktop 原生配置](https://claude.com/docs/third-party/claude-desktop/configuration)、[Anthropic 模型能力](https://platform.claude.com/docs/en/api/models/list)。

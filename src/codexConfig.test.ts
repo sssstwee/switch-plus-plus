@@ -347,9 +347,9 @@ equal(recommendedGatewayOptions.disable_auto_update, false);
 equal(recommendedGatewayOptions.skip_webfetch_preflight, false);
 equal(recommendedGatewayOptions.auto_compact, true);
 equal(recommendedGatewayOptions.compact_early, true);
-equal(recommendedGatewayOptions.hide_ai_signature, true);
-equal(recommendedGatewayOptions.disable_telemetry, true);
-equal(recommendedGatewayOptions.disable_nonessential_traffic, true);
+equal(recommendedGatewayOptions.hide_ai_signature, false);
+equal(recommendedGatewayOptions.disable_telemetry, false);
+equal(recommendedGatewayOptions.disable_nonessential_traffic, false);
 equal(recommendedGatewayOptions.enable_fine_grained_tool_streaming, false);
 
 const recommendedDesktopOptions = withRecommendedGatewayTargetConfigOptions(
@@ -360,15 +360,15 @@ const recommendedDesktopOptions = withRecommendedGatewayTargetConfigOptions(
 );
 equal(recommendedDesktopOptions.enable_stream_watchdog, false);
 equal(recommendedDesktopOptions.api_timeout_long, true);
-equal(recommendedDesktopOptions.disable_telemetry, true);
-equal(recommendedDesktopOptions.disable_nonessential_traffic, true);
+equal(recommendedDesktopOptions.disable_telemetry, false);
+equal(recommendedDesktopOptions.disable_nonessential_traffic, false);
 equal(recommendedDesktopOptions.enable_tool_search, false);
 equal(recommendedDesktopOptions.auto_compact, false);
 equal(recommendedDesktopOptions.compact_early, false);
 equal("skip_introduction" in recommendedDesktopOptions, false);
 
 const desktopOptionKeys = configOptionItemsForTarget("claude_desktop", false).map((option) => option.key);
-equal(desktopOptionKeys.length, recommendedClaudeDesktopConfigOptionKeys.size);
+equal(desktopOptionKeys.length, 3);
 for (const key of recommendedClaudeDesktopConfigOptionKeys) {
   includes(desktopOptionKeys, key);
 }

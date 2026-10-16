@@ -1,5 +1,30 @@
 # Changelog
 
+## v1.0.22 - 2026-10-16
+
+修复配置勾选项仅按厂商判断、推理强度被固定为 high/max，以及预览与实际写入不一致的问题。
+
+### 功能亮点 / Highlights
+
+- 配置页检测本机 Codex、Claude Code、Claude Desktop 版本；版本未确认或低于验证基线时不宣称选项可用。Codex 同时参考已安装运行时及本机官方模型目录。
+- 推理强度改为按所选模型显示具体档位，默认沿用模型设置；实时模型能力优先，明确不支持的能力不会被内置规则覆盖。保留旧 high/max 配置的有效选择，切换模型时清理无效参数。
+- Claude Code 按每个模型角色生成能力声明，不再统一声明交错、自适应或最高档思考；Tool Search、细粒度工具流和 1h 缓存需要协议与能力依据。推荐配置保留遥测、统计和署名等用户偏好。
+- Claude Desktop 的三项原生设置按应用判断，流式等待只用于网关；修复禁用参数仍出现在预览的问题。
+- 修复 Codex Goal 选项在后端丢失及取消勾选未写入 false；推理档位、模型目录、JSON/TOML 导入与实际写入保持一致。
+
+### 界面预览 / Screenshots
+
+配置选项旁显示检测到的应用版本；推理强度使用“模型默认”和已确认档位选择器。未知能力明确说明，不自动强制开启。
+
+### macOS 首次启动说明 / macOS First-Launch Notice
+
+Switch++ 尚未通过 Apple 公证（notarization）。安装到 `/Applications` 后，如被系统阻止，可运行：
+
+```bash
+sudo xattr -rd com.apple.quarantine "/Applications/Switch++.app"
+open "/Applications/Switch++.app"
+```
+
 ## v1.0.21 - 2026-10-16
 
 修复实时模型列表丢失官网名称、遗漏新型号和多模态模型的问题；删除视觉代理及 xAI、Google AI 厂商预设。

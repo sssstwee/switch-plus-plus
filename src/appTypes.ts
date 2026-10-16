@@ -26,6 +26,7 @@ export type ModelMap = {
 };
 
 export type GatewayConfigOptions = {
+  reasoning_effort?: string;
   hide_ai_signature: boolean;
   teammates_mode: boolean;
   enable_tool_search: boolean;
@@ -66,7 +67,7 @@ export type GatewayConfigOptions = {
   write_general_config: boolean;
 };
 
-export type GatewayConfigOptionKey = Exclude<keyof GatewayConfigOptions, "write_general_config">;
+export type GatewayConfigOptionKey = Exclude<keyof GatewayConfigOptions, "write_general_config" | "reasoning_effort">;
 
 export type GatewayProfile = {
   id: string;
@@ -307,6 +308,8 @@ export type ProviderModel = {
   max_output_tokens?: number | null;
   reasoning_efforts?: string[];
   default_reasoning?: string | null;
+  capabilities?: Record<string, boolean>;
+  supported_parameters?: string[] | null;
 };
 
 export type ModelDiscoveryResult = {
@@ -363,6 +366,8 @@ export type PresetMode = "custom" | "api" | "package";
 export type PresetRegion = "domestic" | "international";
 
 export type AddForm = {
+  model_metadata?: ProviderModel[];
+  client_version?: string;
   display_name: string;
   website_url: string;
   note: string;

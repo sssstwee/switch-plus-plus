@@ -441,6 +441,8 @@ excludes(stableClaudePreview, "skipWebFetchPreflight");
 
 const maxThinkingClaudePreview = buildGatewayConfigPreview({
   ...baseCodexForm,
+  api_format: "anthropic",
+  model_map: defaultModelMap("deepseek-flash"),
   config_options: {
     max_thinking: true,
     skip_introduction: true,

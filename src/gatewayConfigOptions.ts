@@ -16,6 +16,7 @@ import {
   vendorPresetHasTargetAdapter,
   vendorPresetSourceUrlForTarget,
 } from "./vendorPresets.ts";
+import { allowedReasoningEfforts, capabilityContextForForm, clientConfigSupport, modelCapability, modelReasoningEfforts, type CapabilityContext } from "./configCapabilities.ts";
 
 export const defaultGatewayConfigOptions: GatewayConfigOptions = {
   hide_ai_signature: false,
@@ -104,7 +105,7 @@ export const gatewayConfigOptionItems: Array<{
   {
     key: "declare_model_capabilities",
     label: "声明模型能力",
-    description: "写入 *_SUPPORTED_CAPABILITIES，告诉 Claude Code 当前网关模型支持 effort/thinking/interleaved thinking。",
+    description: "按每个映射模型的已确认能力写入 *_SUPPORTED_CAPABILITIES，不额外声明交错或自适应思考。",
     configFields: [
       "env.ANTHROPIC_DEFAULT_HAIKU_MODEL_SUPPORTED_CAPABILITIES",
       "env.ANTHROPIC_DEFAULT_SONNET_MODEL_SUPPORTED_CAPABILITIES",
@@ -438,19 +439,13 @@ const documentedClaudeCodeGatewayPresets = new Set([
 ]);
 
 export const recommendedClaudeGatewayConfigOptionKeys = new Set<GatewayConfigOptionKey>([
-  "hide_ai_signature",
-  "enable_tool_search",
   "api_timeout_long",
   "auto_compact",
   "compact_early",
-  "disable_telemetry",
-  "disable_nonessential_traffic",
 ]);
 
 export const recommendedClaudeDesktopConfigOptionKeys = new Set<GatewayConfigOptionKey>([
   "api_timeout_long",
-  "disable_telemetry",
-  "disable_nonessential_traffic",
 ]);
 
 const explicitEffortPresets = new Set(["anthropic", "deepseek"]);
@@ -508,7 +503,21 @@ function getPresetSourceReference(preset: VendorPreset | null): ConfigSourceRefe
   return sourceReferences.unknown;
 }
 
-export function getConfigOptionSupport(option: GatewayConfigOptionKey, preset: VendorPreset | null): ConfigOptionSupport {
+export function getConfigOptionSupport(option: GatewayConfigOptionKey, preset: VendorPreset | null, context?: CapabilityContext): ConfigOptionSupport {
+  if (context) {
+    const versionIssue = clientConfigSupport("claude_cli", context.clientVersion, option === "disable_prompt_suggestions" ? "2.1.238" : undefined);
+    if (versionIssue) return {supported: false, source: sourceReferences.claudeCode, detail: versionIssue};
+    const capability = ({ enable_tool_search: "tool_search", enable_prompt_caching_1h: "prompt_cache_1h", enable_fine_grained_tool_streaming: "fine_grained_tool_streaming", show_thinking_summaries: "thinking" } as Record<string, string>)[option];
+    if (capability || option === "max_thinking" || option === "declare_model_capabilities") {
+      const native = context.apiFormat === undefined || context.apiFormat === "anthropic";
+      const levels = modelReasoningEfforts(context);
+      const confirmed = option === "max_thinking" ? levels.includes("max") : option === "declare_model_capabilities" ? levels.length > 0 || modelCapability(context, "thinking") === true : modelCapability(context, capability!) === true;
+      // Official Anthropic handles its own tool search and prompt caching.
+      const official = preset?.id === "anthropic" || preset?.id === "anthropic-package";
+      const supported = native && (!capability || modelCapability(context, capability) !== false) && (confirmed || (official && capability && ["prompt_cache_1h", "fine_grained_tool_streaming"].includes(capability)));
+      return {supported: Boolean(supported), source: getPresetSourceReference(preset), detail: supported ? "当前模型能力与 Anthropic 接入协议已确认该项；实时能力中的明确限制优先。" : "当前模型或协议未确认该项能力；不声明，也不自动启用。Tool Search 还要求上游接受 tool_reference。"};
+    }
+  }
   if (hiddenClaudeConfigOptionKeys.has(option)) {
     return {
       supported: false,
@@ -628,17 +637,33 @@ export function getConfigOptionSupport(option: GatewayConfigOptionKey, preset: V
 export function sanitizeConfigOptionsForPreset(
   options: GatewayConfigOptions,
   preset: VendorPreset | null,
+  context?: CapabilityContext,
 ): GatewayConfigOptions {
   const supported = getSupportedConfigOptions(preset);
   const next = withoutHiddenClaudeConfigOptions(options);
 
   for (const option of gatewayConfigOptionItems) {
-    if (!supported.has(option.key)) {
+    if (context ? !getConfigOptionSupport(option.key, preset, context).supported : !supported.has(option.key)) {
       next[option.key] = false;
     }
   }
+  if (context) {
+    const effort = next.reasoning_effort || (next.max_thinking ? "max" : "");
+    next.reasoning_effort = allowedReasoningEfforts("claude_cli", context).includes(effort) ? effort : "";
+    next.max_thinking = false;
+  }
 
   return next;
+}
+
+export function sanitizeGatewayConfigOptionsForForm(form: AddForm, target: TargetKey, preset: VendorPreset | null): GatewayConfigOptions {
+  const context = capabilityContextForForm(form, target);
+  if (target === "claude_desktop") {
+    const next = {...form.config_options, reasoning_effort: "", max_thinking: false};
+    for (const option of gatewayConfigOptionItems) if (!getTargetConfigOptionSupport(option, target, preset, context).supported) next[option.key] = false;
+    return next;
+  }
+  return sanitizeConfigOptionsForPreset(form.config_options, preset, context);
 }
 
 export function withRecommendedGatewayConfigOptions(
@@ -679,15 +704,19 @@ export function getTargetConfigOptionSupport(
   option: (typeof gatewayConfigOptionItems)[number],
   target: TargetKey,
   preset: VendorPreset | null,
+  context?: CapabilityContext,
 ): ConfigOptionSupport {
   const appLabel = targetLabel(target);
 
   if (target === "claude_desktop") {
+    const versionIssue = clientConfigSupport(target, context?.clientVersion);
+    if (versionIssue) return {supported: false, source: sourceReferences.claudeCode, detail: versionIssue};
+    if (option.key === "api_timeout_long" && context?.usesGateway === false) return {supported: false, source: sourceReferences.claudeCode, detail: "该流式等待字段仅适用于网关连接；官方登录及 Anthropic 直连沿用客户端默认值。"};
     return { supported: ["api_timeout_long", "disable_telemetry", "disable_nonessential_traffic"].includes(option.key),
       source: { label: "Claude Desktop 官方配置", url: "https://claude.com/docs/third-party/claude-desktop/configuration" },
       detail: "写入 Claude Desktop 原生配置字段；完全退出并重新打开 Claude 后生效。" };
   }
-  if (target === "claude_cli") return getConfigOptionSupport(option.key, preset);
+  if (target === "claude_cli") return getConfigOptionSupport(option.key, preset, context);
 
   if (!preset || preset.id === "custom") {
     return {
@@ -773,13 +802,17 @@ export function recommendedCodexConfigOptionsForForm(form: AddForm, preset: Vend
       connectionMode: form.connection_mode,
       presetId: preset?.id,
       presetName: preset?.name,
+      metadata: form.model_metadata, apiFormat: form.api_format, clientVersion: form.client_version,
     });
-    next[option.key] = support.supported && (
+    next[option.key] = option.key !== "high_reasoning" && support.supported && (
       support.tone === "ok" ||
       current[option.key] ||
       recommendedCodexConfigOptionKeys.has(option.key)
     );
   }
+  const levels = allowedReasoningEfforts("codex", capabilityContextForForm(form, "codex"));
+  const effort = current.reasoning_effort || (current.high_reasoning ? "high" : "");
+  next.reasoning_effort = levels.includes(effort) && !clientConfigSupport("codex", form.client_version) ? effort : "";
   return next;
 }
 
