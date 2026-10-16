@@ -157,7 +157,7 @@ function isPresetVisibleForTarget(preset: VendorPreset, target: TargetKey) {
     return false;
   }
   const targetApiFormat = vendorPresetApiFormatForTarget(preset, target);
-  if (targetApiFormat === "openai_responses" && target !== "grok_build") return false;
+  if (targetApiFormat === "openai_responses" && !hasTargetAdapter) return false;
   if (targetApiFormat === "gemini" && !hasTargetAdapter) return false;
   if (preset.id === "custom") return true;
   return true;

@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.0.19 - 2026-10-16
+
+本版仅保留 Codex、Claude Code 和 Claude Desktop，移除其他客户端及记忆整理模块；同时修复厂商预设过时、环境检查范围过宽，以及 macOS 红绿灯与内容边框重叠的问题。
+
+### 功能亮点 / Highlights
+
+- 新增 GPT-6.1 Sol，更新 Claude Fable 5.1 / Opus 5.5 / Sonnet 5.5 / Haiku 5.5、Gemini 3.8 Flash / 4 Argon、Grok 4.7、GLM-5.3、Kimi K3 / K2.7 Code 与 Qwen3.8；OpenRouter 使用其实际模型目录中的 ID。OpenAI 保留 Astra 默认选项，实时发现不再过滤新发布的系列型号。
+- DeepSeek 使用当前 `deepseek-flash` 模型名，Flash 与 V4-Pro 均支持原生 Responses；区分 Flash 原生图片输入与 Pro 视觉代理，保留旧模型别名兼容。
+- MiniMax Codex 配置改用原生 Responses；套餐新增 `MiniMax-M3.1-Flash-Preview` 并使用官方推荐的 512K 客户端窗口；普通 API 保留 M3。GLM 套餐不包含尚未开放的 FlashX，百炼 Coding Plan 使用其独立的精确模型清单。
+- GPT-6 工具调用统一使用 Responses；修复 GPT-6.1 的推理、图片、摘要和上下文元数据。按 Codex `0.163.0` schema 清理过时的 `preferred_auth_method` 与根级 `model_supports_reasoning_summaries` 字段，摘要能力改由模型目录声明。
+- 应用与环境检查仅保留 Codex、Claude Code 和 Claude Desktop，移除其他客户端的配置、安装、升级和卸载支持；移除“记忆整理”模块，保留磁盘上的用户数据。
+- macOS 使用系统原生标题栏管理红绿灯与窗口拖动，移除固定按钮坐标和网页圆角裁切，避免控件与内容边框重叠。
+- 升级内置 CLIProxyAPI 至 `v8.0.31`，校验归档及二进制哈希。
+
+型号与协议核对来源：[OpenAI](https://developers.openai.com/api/docs/guides/latest-model)、[Claude](https://platform.claude.com/docs/en/models/overview)、[Gemini](https://ai.google.dev/gemini-api/docs/models)、[DeepSeek](https://api-docs.deepseek.com/quick_start/agent_integrations/codex/)、[MiniMax](https://platform.minimax.io/docs/m-plan/codex)、[GLM](https://docs.z.ai/guides/llm/glm-5.3)、[Kimi](https://platform.kimi.ai/docs/models)、[百炼](https://help.aliyun.com/zh/model-studio/models)、[Grok](https://docs.x.ai/developers/models)。厂商账号可用性仍由各账号实时模型目录与套餐权限决定。
+
+### 界面预览 / Screenshots
+
+侧栏保留 Codex、Claude Code、Claude Desktop；环境检查覆盖 Codex CLI、Codex Desktop、Claude Code 和 Claude Desktop。macOS 窗口控制由系统原生标题栏承载。
+
+### macOS 首次启动说明 / macOS First-Launch Notice
+
+Switch++ 尚未通过 Apple 公证（notarization）。安装到 `/Applications` 后，如被系统阻止，可运行：
+
+```bash
+sudo xattr -rd com.apple.quarantine "/Applications/Switch++.app"
+open "/Applications/Switch++.app"
+```
+
 ## v1.0.18 - 2026-09-23
 
 Switch++ 更新至 ChatGPT/Codex 当前 GPT-6 模型系列，默认使用 GPT-6 Astra，并支持 GPT-6 Sol 与 GPT-6 Luna。

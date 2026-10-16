@@ -10,7 +10,7 @@
     />
     <meta
       name="keywords"
-      content="Switch++, Switch Plus Plus, switchpp, switch-plus-plus, cc3p, Claude Code 第三方模型, Claude Code 配置切换, Claude Code 网关, Claude Desktop 第三方模型, Codex 第三方模型, Codex CLI, Codex Desktop, Codex 配置切换, Codex 本地网关, Agent Router, model router, model switcher, LLM gateway, Claude Code third-party models, Claude Desktop, Codex third-party models, Hermes, Hermes Agent, OpenCode, OpenClaw, Pi, Pi Coding Agent, Oh My OpenAgent, Oh My OpenCode, Oh My Pi, DeepSeek Codex, Kimi Codex, MiniMax Claude Code, GLM Codex, OpenAI compatible, Anthropic compatible, OpenAI API proxy, Anthropic API proxy, third-party config switcher, third-party config manager, local compatibility gateway, AI coding agent"
+      content="Switch++, Switch Plus Plus, switchpp, switch-plus-plus, cc3p, Claude Code 第三方模型, Claude Code 配置切换, Claude Code 网关, Claude Desktop 第三方模型, Codex 第三方模型, Codex CLI, Codex Desktop, Codex 配置切换, Codex 本地网关, Agent Router, model router, model switcher, LLM gateway, Claude Code third-party models, Claude Desktop, Codex third-party models, DeepSeek Codex, Kimi Codex, MiniMax Claude Code, GLM Codex, OpenAI compatible, Anthropic compatible, OpenAI API proxy, Anthropic API proxy, third-party config switcher, third-party config manager, local compatibility gateway, AI coding agent"
     />
     <meta name="application-name" content="Switch++" />
     <meta property="og:title" content="Switch++ - Claude Code / Codex 第三方模型接入工具" />
@@ -387,7 +387,7 @@
             </div>
             <div class="value-card">
               <strong>本地 agent 工具链管理</strong>
-              <p>覆盖 Claude Code、Claude Desktop、Codex、Hermes、OpenCode、OpenClaw、Pi、Oh My 系列入口。</p>
+              <p>覆盖 Claude Code、Claude Desktop 和 Codex 入口。</p>
             </div>
           </div>
         </div>
@@ -417,7 +417,7 @@
             </div>
             <div class="value-card">
               <strong>Local agent toolchain management</strong>
-              <p>Cover Claude Code, Claude Desktop, Codex, Hermes, OpenCode, OpenClaw, Pi, and Oh My family entry points.</p>
+              <p>Cover Claude Code, Claude Desktop, and Codex entry points.</p>
             </div>
           </div>
         </div>
@@ -527,7 +527,7 @@
           <span class="lang-inline" data-lang="en">Use Cases</span>
         </h2>
         <ul class="lang-block" data-lang="zh">
-          <li>在一个桌面应用里管理 Claude Code、Claude Desktop、Codex、Codex Desktop、Hermes、OpenCode、OpenClaw 和 Pi 生态配置。</li>
+          <li>在一个桌面应用里管理 Claude Code、Claude Desktop 和 Codex 配置。</li>
           <li>在官方账号模式和第三方模型厂商模式之间切换。</li>
           <li>覆盖 Claude Code 第三方网关、Claude Desktop 本地网关、Codex Desktop、本地 Codex third-party provider、OpenAI-compatible 和 Anthropic-compatible 端点。</li>
           <li>Codex 三方模型可通过本地 Responses runtime gateway 实时路由；三方配置不依赖官方登录，插件、移动端和 connector 属于官方账号能力，需要切回官方配置管理和验证。</li>
@@ -535,7 +535,7 @@
           <li>写回本地配置前检查配置内容、推荐选项和目标文件位置，并优先创建备份。</li>
         </ul>
         <ul class="lang-block" data-lang="en">
-          <li>Manage Claude Code, Claude Desktop, Codex, Codex Desktop, Hermes, OpenCode, OpenClaw, and Pi-family configuration in one desktop app.</li>
+          <li>Manage Claude Code, Claude Desktop, and Codex configuration in one desktop app.</li>
           <li>Switch between official-account mode and third-party model provider mode.</li>
           <li>Cover Claude Code third-party gateways, Claude Desktop local gateway profiles, Codex Desktop, local Codex third-party providers, OpenAI-compatible endpoints, and Anthropic-compatible endpoints.</li>
           <li>Route Codex third-party models through the local Responses runtime gateway; third-party profiles do not depend on official login, while plugins, mobile access, and connectors should be managed and verified from an official profile.</li>
@@ -586,54 +586,6 @@
                 <span class="lang-inline" data-lang="en">Official login config and third-party provider config</span>
               </td>
               <td><code>~/.codex/auth.json</code>, <code>~/.codex/config.toml</code></td>
-            </tr>
-            <tr>
-              <td>OpenCode</td>
-              <td>
-                <span class="lang-inline" data-lang="zh">OpenAI-compatible provider、默认模型、small model</span>
-                <span class="lang-inline" data-lang="en">OpenAI-compatible provider, default model, small model</span>
-              </td>
-              <td><code>~/.config/opencode/opencode.json</code></td>
-            </tr>
-            <tr>
-              <td>Oh My OpenAgent</td>
-              <td>
-                <span class="lang-inline" data-lang="zh">agents/categories 模型路由，并同步 OpenCode provider</span>
-                <span class="lang-inline" data-lang="en">agents/categories model routing, with synced OpenCode provider config</span>
-              </td>
-              <td><code>~/.config/opencode/oh-my-openagent.json</code></td>
-            </tr>
-            <tr>
-              <td>OpenClaw</td>
-              <td>
-                <span class="lang-inline" data-lang="zh">provider 与默认 agent 模型</span>
-                <span class="lang-inline" data-lang="en">provider and default agent model</span>
-              </td>
-              <td><code>~/.openclaw/openclaw.json</code></td>
-            </tr>
-            <tr>
-              <td>Hermes Agent</td>
-              <td>
-                <span class="lang-inline" data-lang="zh">custom provider 与默认模型</span>
-                <span class="lang-inline" data-lang="en">custom provider and default model</span>
-              </td>
-              <td><code>~/.hermes/config.yaml</code></td>
-            </tr>
-            <tr>
-              <td>Pi</td>
-              <td>
-                <span class="lang-inline" data-lang="zh">custom provider、默认 provider 与默认模型</span>
-                <span class="lang-inline" data-lang="en">custom provider, default provider, and default model</span>
-              </td>
-              <td><code>~/.pi/agent/models.json</code>, <code>~/.pi/agent/settings.json</code></td>
-            </tr>
-            <tr>
-              <td>Oh My Pi</td>
-              <td>
-                <span class="lang-inline" data-lang="zh">provider 与 agent/category 模型路由</span>
-                <span class="lang-inline" data-lang="en">provider and agent/category model routing</span>
-              </td>
-              <td><code>~/.omp/agent/models.yml</code></td>
             </tr>
           </tbody>
         </table>

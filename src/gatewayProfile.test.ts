@@ -70,18 +70,6 @@ const baseProfile: GatewayProfile = {
     disable_telemetry: false,
     disable_nonessential_traffic: false,
     disable_auto_update: false,
-    opencode_disable_share: false,
-    opencode_require_approval: false,
-    opencode_disable_autoupdate: false,
-    opencode_provider_allowlist: false,
-    openclaw_model_allowlist: true,
-    openclaw_disable_channel_health: false,
-    openclaw_handshake_timeout_long: false,
-    openclaw_sandbox_non_main: false,
-    hermes_worktree: false,
-    hermes_streaming: false,
-    hermes_smart_approvals: false,
-    hermes_disable_memory: false,
     write_general_config: true,
   },
   models: [{ name: "claude-sonnet-4-6", supports_1m: false }],
@@ -162,3 +150,8 @@ equal(gatewayProfileUsesProxyForTarget(deepseekDirectProfile, "claude_desktop"),
 
 equal(resolveGatewayUpstreamModel(baseProfile, preset), "deepseek-v4-pro");
 equal(extractTomlAssignment('model = "gpt-5.5"\nmodel_provider = "openai"', "model"), "gpt-5.5");
+
+for (const model of ["deepseek-flash", "claude-fable-5-1", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "MiniMax-M3.1-Flash-Preview", "glm-5.3", "glm-5.3-flash", "kimi-k3", "k3", "kimi-for-coding", "gemini-4-argon", "gemini-3.8-flash"]) {
+  equal(modelSupports1mContext(model), true);
+}
+equal(modelSupports1mContext("k3-256k"), false);

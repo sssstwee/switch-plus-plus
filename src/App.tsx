@@ -208,8 +208,6 @@ import {
 } from "./components/gatewayHelpers.ts";
 import { useAppUiStore } from "./store/useAppUiStore.ts";
 import { useShellUiStore } from "./store/useShellUiStore.ts";
-
-const CodexMemoryView = lazy(() => import("./CodexMemoryView.tsx"));
 const McpSkillsView = lazy(() => import("./McpSkillsView.tsx"));
 const SubscriptionProxyView = lazy(
   () => import("./features/subscription-proxy/SubscriptionProxyView.tsx"),
@@ -240,10 +238,6 @@ function extraCodexModelsFromProfile(profile: CodexProfile, primaryModel: string
   return uniqueModelNames(profile.models ?? []).filter((model) => model.toLowerCase() !== primaryKey);
 }
 
-function targetUsesAppConfigFields(target: TargetKey) {
-  return ["grok_build", "opencode", "oh_my_opencode", "openclaw", "hermes", "pi", "oh_my_pi"].includes(target);
-}
-
 function appStateWithSubscriptionProxyProfiles(
   currentState: AppState,
   status: SubscriptionProxyStatus,
@@ -264,13 +258,6 @@ function appStateWithSubscriptionProxyProfiles(
       "claude_desktop",
       preferredModel,
     ),
-    grok_build: syncSubscriptionProxyProfiles(
-      currentState.grok_build,
-      currentState.applied.grok_build,
-      status,
-      "grok_build",
-      preferredModel,
-    ),
   };
   if (Object.values(sync).every((result) => result.action === "unchanged")) {
     return { nextState: currentState, sync };
@@ -280,12 +267,10 @@ function appStateWithSubscriptionProxyProfiles(
       ...currentState,
       claude_cli: sync.claude_cli.profiles,
       claude_desktop: sync.claude_desktop.profiles,
-      grok_build: sync.grok_build.profiles,
       applied: {
         ...currentState.applied,
         claude_cli: sync.claude_cli.appliedProfileId,
         claude_desktop: sync.claude_desktop.appliedProfileId,
-        grok_build: sync.grok_build.appliedProfileId,
       },
     },
     sync,
@@ -295,7 +280,6 @@ function appStateWithSubscriptionProxyProfiles(
 const subscriptionProxyTargets = [
   "claude_cli",
   "claude_desktop",
-  "grok_build",
 ] as const;
 
 async function saveAndReapplySubscriptionProxyProfiles(
@@ -518,7 +502,6 @@ function App() {
     appUpdateInstallState,
     installAppUpdate,
     settingsButtonRef,
-    startWindowDrag,
     toggleSettingsPopover,
   } = useAppShellChrome({
     setSettingsPopoverAnchor,
@@ -737,11 +720,6 @@ function App() {
         profiles: state.claude_desktop,
         target: "claude_desktop" as const,
       },
-      {
-        name: "Grok Build",
-        profiles: state.grok_build,
-        target: "grok_build" as const,
-      },
     ]
       .filter(({ profiles, target: profileTarget }) =>
         profiles.some((profile) =>
@@ -906,7 +884,6 @@ function App() {
       activationConstraint: { distance: 6 },
     }),
   );
-
 
   const currentEnvPlatform = envResults?.platform ?? browserEnvPlatform();
   const currentEnvPlatformLabel = envResults?.platform_label ?? envPlatformLabel(currentEnvPlatform);
@@ -1766,7 +1743,7 @@ function App() {
         showStatus("订阅代理配置已从应用配置列表自动移除。", "success");
       } else {
         showStatus(
-          "订阅代理配置已自动同步到 Claude Code、Claude Desktop 与 Grok Build。",
+          "订阅代理配置已自动同步到 Claude Code、Claude Desktop。",
           "success",
         );
       }
@@ -2113,20 +2090,15 @@ function App() {
         || isSubscriptionProxyBaseUrl(formForSubmit.base_url)
           ? "direct"
           : "proxy";
-      const resolvedGatewayModels = targetUsesAppConfigFields(target)
-        ? uniqueModelNames([resolvedGatewayUpstreamModel, ...formForSubmit.models]).map((name) => ({
-            name,
-            supports_1m: formForSubmit.supports_1m_context ?? false,
-          }))
-        : buildGatewayModels(
-            resolvedDesktopModelMap,
-            target === "claude_desktop"
-              ? claudeDesktopGatewayModels
-              : selectedPreset
-                ? (allVendorPresets.find((p) => p.id === selectedPreset)?.models ?? [])
-                : claudeApiModels,
-            formForSubmit.supports_1m_context,
-          );
+      const resolvedGatewayModels = buildGatewayModels(
+        resolvedDesktopModelMap,
+        target === "claude_desktop"
+          ? claudeDesktopGatewayModels
+          : selectedPreset
+            ? (allVendorPresets.find((p) => p.id === selectedPreset)?.models ?? [])
+            : claudeApiModels,
+        formForSubmit.supports_1m_context,
+      );
       const profile: GatewayProfile = {
         id: profileId,
         display_name: name,
@@ -2304,17 +2276,7 @@ function App() {
         provider_model_map: nextProviderMap,
       };
     }
-    if (targetUsesAppConfigFields(target)) {
-      return {
-        ...form,
-        model: trimmed,
-        model_map: {
-          ...form.model_map,
-          main: trimmed,
-        },
-        models: uniqueModelNames([trimmed, ...form.models]),
-      };
-    }
+
     return {
       ...form,
       model: trimmed,
@@ -2331,34 +2293,6 @@ function App() {
       return providerModelMapFallback(addForm, currentSelectedPreset, target).main;
     }
     return addForm.model || addForm.model_map.main;
-  }
-
-  function updateAppAvailableModel(index: number, value: string) {
-    setAddForm((form) => ({
-      ...form,
-      models: form.models.map((model, modelIndex) => (modelIndex === index ? value : model)),
-    }));
-  }
-
-  function addAppAvailableModel() {
-    setAddForm((form) => ({ ...form, models: [...form.models, ""] }));
-  }
-
-  function removeAppAvailableModel(index: number) {
-    setAddForm((form) => ({
-      ...form,
-      models: form.models.filter((_, modelIndex) => modelIndex !== index),
-    }));
-  }
-
-  function updateAppSecondaryModel(key: keyof ModelMap, value: string) {
-    setAddForm((form) => ({
-      ...form,
-      model_map: {
-        ...form.model_map,
-        [key]: value,
-      },
-    }));
   }
 
   function normalizedUrlForCompare(url: string) {
@@ -2507,7 +2441,7 @@ function App() {
     updateGatewayProfile(profileId, {
       models: profile.models.filter((_, i) => i !== index),
     });
-    showStatus(targetUsesAppConfigFields(target) ? "已删除可用模型。" : "已删除模型映射。");
+    showStatus("已删除模型映射。");
   }
 
   function requestDeleteModel(profileId: string, index: number) {
@@ -2518,7 +2452,7 @@ function App() {
       setDeleteReadyModel({ profileId, index });
       deleteModelTimerRef.current = null;
     }, 300);
-    showStatus(targetUsesAppConfigFields(target) ? "请再次确认删除该可用模型。" : "请再次确认删除该模型映射。");
+    showStatus("请再次确认删除该模型映射。");
   }
 
   function handleDeleteModelPress(profileId: string, index: number) {
@@ -2585,13 +2519,7 @@ function App() {
       )
     : buildCodexConfigTomlTemplate(addForm, currentSelectedPreset);
   const targetConfigEditorLabel =
-    target === "grok_build"
-      ? "配置 TOML"
-      : target === "hermes" || target === "oh_my_pi"
-        ? "配置 YAML"
-        : target === "openclaw"
-          ? "配置 JSON5"
-          : "配置 JSON";
+    "配置 JSON";
   const targetConfigOptionsLabel = isClaudeGatewayTarget(target)
     ? target === "claude_desktop"
       ? "Claude Desktop 选项"
@@ -2625,12 +2553,6 @@ function App() {
       ? desktopFormUsesLocalGateway
         ? "该地址保存为厂商上游地址；Claude Desktop 实际读取本地桌面网关，并由 Switch++ 按下方模型映射转发。"
         : "Anthropic 官方地址可由 Claude Desktop 直接使用；下方 profile 文件仍会记录当前读取字段。"
-      : target === "opencode"
-        ? "该地址会写入 OpenCode provider；如果已经配置 Oh My OpenAgent，也会同步刷新它的 agents/categories 路由。"
-      : target === "oh_my_opencode"
-        ? "该地址会同步写入 OpenCode provider；Oh My OpenAgent 自身只保存 agents/categories 路由。"
-      : target === "grok_build"
-        ? "该地址会写入 Grok Build 的自定义模型配置，并作为当前默认模型端点。"
       : addForm.api_format === "anthropic"
         ? "Claude Code 可直接使用 Anthropic 兼容地址；开启本地网关后可获得记录、预检和统一启停。"
         : "该地址只作为 Switch++ 上游地址保存；Claude Code 会请求本地网关。";
@@ -2640,43 +2562,16 @@ function App() {
       : "";
   const targetAdvancedProtocolNote = canEditGatewayProtocolFields
     ? "自定义配置不会假定协议兼容性；请按模型厂商与目标 agent 官方文档选择 API 格式、认证字段和 Base URL。"
-    : target === "opencode"
-      ? "OpenCode 会写入 opencode.json 的 provider/model/small_model；如果已有 Oh My OpenAgent 配置上下文，应用 OpenCode 时会同步刷新 Oh My OpenAgent 路由，避免两个入口各自指向不同模型。"
-      : target === "grok_build"
-        ? "Grok Build 会在 ~/.grok/config.toml 中写入 Switch++ 管理的自定义模型，并更新 models.default；其他用户设置、注释和非 Switch++ 模型会保留。"
-      : target === "oh_my_opencode"
-        ? "Oh My OpenAgent 是 OpenCode 插件增强配置；会写入 oh-my-openagent.json 的 agents/categories 模型路由，并同步 OpenCode provider 配置。两个页面都使用 opencode 启动入口，后应用的配置会成为共同生效配置。"
-        : target === "openclaw"
-          ? "OpenClaw 会写入 openclaw.json 的 models.providers 与 agents.defaults；预设厂商已内置协议与认证方式，通常只需要填写厂商 API Key 和模型。"
-          : target === "hermes"
-            ? addForm.api_format === "gemini"
-              ? "Hermes 会按官方 Gemini 适配写入 native provider：config.yaml 使用 provider=gemini/base_url=原生 Gemini API，API Key 写入 ~/.hermes/.env；CLI 与 Desktop 共享这套配置，不会写入 custom_providers。"
-              : "Hermes 会写入共享 config.yaml 的 model 与 custom_providers；CLI 与 Desktop 共享这套配置，新会话读取配置文件，当前会话可用 /model 热切。"
-            : target === "pi"
-              ? "Pi 会写入 models.json 的 custom provider，并更新 settings.json 的默认 provider 与模型。"
-              : target === "oh_my_pi"
-                ? "Oh My Pi 是独立增强版 CLI，启动入口是 omp；它不是 Pi 的插件包，不需要先安装 Pi。配置会写入 models.yml 的 provider 与 routing。"
-                : target === "antigravity"
-                  ? "Antigravity 官方暂未公开稳定的第三方模型 Base URL/API Key 写入字段；这里只保存 Switch++ 配置列表。"
-                  : isCodexTarget(target)
+    : isCodexTarget(target)
                     ? addForm.compat_mode === "proxy"
                       ? addForm.api_format === "openai_responses"
                         ? "Codex 三方模式使用专用 provider；本地网关负责记录、认证和统一启停。"
                         : "Codex 三方模式使用专用 provider；本地网关负责适配上游 Chat Completions。"
                       : "Codex 三方厂商连接使用专用 custom provider；官方 openai provider 与 auth.json 保持隔离。"
                     : "Claude Code 仍按 Anthropic Messages 请求本地网关。预设厂商已内置协议与认证方式，通常只需要填写厂商 API Key 和模型。";
-  const targetDependencyNotice = target === "oh_my_opencode"
-    ? "Oh My OpenAgent 是 OpenCode 插件增强配置；需要先安装 OpenCode CLI，启动入口仍是 opencode。这里单独维护 agents/categories 路由，并会同步写入 OpenCode provider；如果之后在 OpenCode 页面应用另一条配置，会同步刷新 Oh My OpenAgent 路由，以最后一次应用为准。"
-    : target === "oh_my_pi"
-      ? "Oh My Pi 是独立增强版 CLI，启动入口是 omp；它不是 Pi 的插件包，不需要先安装 Pi。"
-      : "";
-  const targetAddActionLabel = target === "oh_my_opencode" ? "添加增强配置" : "添加配置";
-  const targetEmptyAddText = target === "oh_my_opencode"
-    ? "为 Oh My OpenAgent 添加一条增强配置；需要先安装 OpenCode CLI。"
-    : `为 ${currentTargetMeta.title} 添加一条厂商配置开始使用。`;
-  const targetWriteConfigLabel = target === "oh_my_opencode"
-    ? "写入 Oh My OpenAgent 路由并同步 OpenCode provider"
-    : canWriteTargetConfig
+  const targetAddActionLabel = "添加配置";
+  const targetEmptyAddText = `为 ${currentTargetMeta.title} 添加一条厂商配置开始使用。`;
+  const targetWriteConfigLabel = canWriteTargetConfig
       ? `写入 ${currentTargetMeta.configFileLabel}`
       : "暂不支持写入该客户端配置";
   function renderAddressVariantSwitch() {
@@ -2874,13 +2769,6 @@ function App() {
         return "claude_cli";
       case "codex_cli":
         return "codex_cli";
-      case "hermes":
-      case "opencode":
-      case "oh_my_opencode":
-      case "openclaw":
-      case "pi":
-      case "oh_my_pi":
-        return item.key;
       default:
         return "";
     }
@@ -2889,32 +2777,12 @@ function App() {
     language === "zh"
       ? `npm install -g ${packageName} --registry=https://registry.npmmirror.com`
       : `npm install -g ${packageName} --registry=https://registry.npmjs.org`;
-  const envCardBunxInstallCommand = (packageName: string) =>
-    `bunx ${packageName} install`;
-  const envCardBunInstallCommand = (packageName: string) =>
-    `bun install -g ${packageName}`;
-  const envCardPipxInstallCommand = (packageName: string) =>
-    language === "zh"
-      ? `pipx install ${packageName} --index-url https://pypi.tuna.tsinghua.edu.cn/simple`
-      : `pipx install ${packageName} --index-url https://pypi.org/simple`;
   const envCardInstallCommand = (item: (typeof envCheckCards)[number]) => {
     switch (envCardInstallTarget(item)) {
       case "claude_cli":
         return envCardNodeInstallCommand("@anthropic-ai/claude-code@latest");
       case "codex_cli":
         return envCardNodeInstallCommand("@openai/codex@latest");
-      case "hermes":
-        return envCardPipxInstallCommand("hermes-agent");
-      case "opencode":
-        return envCardNodeInstallCommand("opencode-ai@latest");
-      case "oh_my_opencode":
-        return envCardBunxInstallCommand("oh-my-openagent");
-      case "openclaw":
-        return envCardNodeInstallCommand("openclaw@latest");
-      case "pi":
-        return envCardNodeInstallCommand("@earendil-works/pi-coding-agent@latest");
-      case "oh_my_pi":
-        return envCardBunInstallCommand("@oh-my-pi/pi-coding-agent@latest");
       default:
         return "";
     }
@@ -3003,11 +2871,6 @@ function App() {
           setLicenseCode(value);
           if (licenseError) setLicenseError("");
         }}
-        onMemoryView={() => {
-          if (!guardLicensedNavigation()) return;
-          setView("memory");
-          setEditingId(null);
-        }}
         onSubscriptionProxyView={() => {
           if (!guardLicensedNavigation()) return;
           setView("subscription_proxy");
@@ -3018,7 +2881,6 @@ function App() {
         onSettingsToggle={toggleSettingsPopover}
         onTargetSelect={switchTargetFromSidebar}
         onUpdateClick={installAppUpdate}
-        onWindowDrag={startWindowDrag}
         settingsButtonRef={settingsButtonRef}
         settingsPopoverOpen={settingsPopoverOpen}
         settingsPopoverStyle={settingsPopoverStyle}
@@ -3034,12 +2896,9 @@ function App() {
               ? "ccr-main ccr-main-subscription-proxy"
             : view === "env"
               ? "ccr-main ccr-main-env"
-              : view === "memory"
-                ? "ccr-main ccr-main-memory"
-                : "ccr-main"
+              : "ccr-main"
         }
       >
-        <div className="ccr-main-window-strip" data-tauri-drag-region onMouseDown={startWindowDrag} />
         {status ? (
           <div
             className={"ccr-status-bar" + (statusType ? " " + statusType : "")}
@@ -3522,7 +3381,7 @@ function App() {
                         ))}
                       </select>
                       <span className="ccr-field-help">
-                        DeepSeek V4 官方 API 是纯文本模型。按官方集成方案，Switch++ 先用所选 profile 描述图片，再把描述交给 DeepSeek；图片会发送到该视觉模型上游。
+                        DeepSeek-Flash（V4.1）支持原生图片。V4-Pro 等纯文本模型可使用所选 profile 描述图片；图片会发送到该视觉模型上游。
                         <a
                           className="ccr-helper-link"
                           href="https://api-docs.deepseek.com/zh-cn/quick_start/agent_integrations/github_copilot"
@@ -3624,93 +3483,7 @@ function App() {
                 </div>
               ) : (
                 <div className="ccr-model-map-panel">
-                  {targetUsesAppConfigFields(target) ? (
-                    (() => {
-                      const secondaryField =
-                        target === "hermes"
-                          ? { key: "sonnet" as keyof ModelMap, label: "标题生成模型", placeholder: "qwen3.7-max" }
-                          : target === "opencode" || target === "oh_my_opencode"
-                            ? { key: "haiku" as keyof ModelMap, label: "小模型 small_model", placeholder: "qwen3.6-flash" }
-                            : null;
-                      const defaultModelLabel =
-                        target === "oh_my_opencode" || target === "oh_my_pi"
-                          ? "路由模型"
-                          : target === "openclaw"
-                            ? "默认主模型"
-                            : "默认模型";
-                      const availableModelLabel =
-                        target === "oh_my_opencode"
-                          ? "同步 OpenCode 可用模型"
-                          : "可用模型";
-                      return (
-                    <>
-                      <div className="ccr-model-map-head">
-                        <div>
-                          <div className="ccr-advanced-title">{targetDisplayName(target)} 配置字段</div>
-                          <p>按当前应用配置文件字段写入默认模型、provider 模型列表与路由模型。</p>
-                        </div>
-                      </div>
-                      {renderModelDiscoveryField(defaultModelLabel)}
-                      {renderOneMillionContextField()}
-                      <div className="ccr-form-grid two">
-                        <div className="ccr-edit-field">
-                          <label>{defaultModelLabel}</label>
-                          <Input
-                            value={addForm.model || addForm.model_map.main}
-                            onChange={(e) =>
-                              setAddForm((form) => formWithSelectedProviderModel(form, e.currentTarget.value))
-                            }
-                          />
-                        </div>
-                        {secondaryField ? (
-                          <div className="ccr-edit-field">
-                            <label>{secondaryField.label}</label>
-                            <Input
-                              value={addForm.model_map[secondaryField.key]}
-                              placeholder={addForm.model || addForm.model_map.main || secondaryField.placeholder}
-                              onChange={(e) => updateAppSecondaryModel(secondaryField.key, e.currentTarget.value)}
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-                      <div className="ccr-edit-section">
-                        <div className="ccr-edit-section-header">
-                          <div className="ccr-edit-section-title">
-                            <LayersIcon className="h-3.5 w-3.5" />
-                            <span>{availableModelLabel}</span>
-                          </div>
-                          <Button size="sm" variant="ghost" onPress={addAppAvailableModel}>
-                            <PlusIcon className="h-3.5 w-3.5" />
-                            <span>添加可用模型</span>
-                          </Button>
-                        </div>
-                        <div className="ccr-model-list">
-                          {addForm.models.map((model, modelIndex) => (
-                            <div key={`${model}-${modelIndex}`} className="ccr-model-row">
-                              <Input
-                                aria-label={`${targetDisplayName(target)} 可用模型 ${modelIndex + 1}`}
-                                placeholder={addForm.model || addForm.model_map.main || "qwen3.7-max"}
-                                value={model}
-                                onChange={(e) => updateAppAvailableModel(modelIndex, e.currentTarget.value)}
-                              />
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onPress={() => removeAppAvailableModel(modelIndex)}
-                              >
-                                <TrashIcon className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="ccr-note-box">
-                          部分应用会在运行时读取厂商 /models；这里写入配置文件中声明的默认候选与上下文长度。
-                        </div>
-                      </div>
-                    </>
-                      );
-                    })()
-                  ) : !isOfficialAnthropicDirect && (
+                  {!isOfficialAnthropicDirect && (
                     <>
                       <div className="ccr-model-map-head">
                         <div>
@@ -3943,13 +3716,6 @@ function App() {
           <McpSkillsView />
         </Suspense>
 
-        ) : effectiveView === "memory" ? (
-
-        /* ═══ Codex memory view ═══ */
-        <Suspense fallback={<div className="ccr-loading-center">加载中...</div>}>
-          <CodexMemoryView />
-        </Suspense>
-
         ) : effectiveView === "env" ? (
 
         /* ═══ Environment check view ═══ */
@@ -4056,12 +3822,7 @@ function App() {
                     const hasUpgrade = envCardHasUpgrade(item);
                     const upgradeInstall = envCardUpgradeInstall(item);
                     const installTarget = envCardInstallTarget(item);
-                    const requiresOpenCodeBeforeInstall =
-                      item.key === "oh_my_opencode"
-                      && !envCheckCards.some((card) => card.key === "opencode" && card.installations.length > 0);
-                    const installBlockedReason = requiresOpenCodeBeforeInstall
-                      ? "需先安装 OpenCode CLI 后才能安装 Oh My OpenAgent。"
-                      : "";
+                    const installBlockedReason = "";
                     const installCommand = envCardInstallCommand(item);
                     const launchCommand = launchCommandDisplay(item);
                     const launchArgs = launchArgsDisplay(item);
@@ -4083,9 +3844,7 @@ function App() {
                       visibleInstallations.some((record) => record.path === activeUpgradePath) ||
                       visibleLocations.some((record) => record.path === activeUpgradePath)
                     );
-                    const installGuidance = requiresOpenCodeBeforeInstall
-                      ? item.hint
-                      : installTarget
+                    const installGuidance = installTarget
                         ? "点击右上角「安装」后会自动刷新当前应用状态。"
                         : item.hint;
                     const isInstallCancelingCurrentEnvCard =
@@ -4148,7 +3907,6 @@ function App() {
                       Boolean(envUpgradePath) ||
                       Boolean(envUninstallPath) ||
                       isInstallCancelingCurrentEnvCard ||
-                      requiresOpenCodeBeforeInstall ||
                       (Boolean(envInstallTargetKey) && envInstallTargetKey !== item.key);
                     const installActionButton = installTarget ? (
                       <Button
@@ -4157,7 +3915,6 @@ function App() {
                         className="ccr-env-install-action"
                         isDisabled={installActionDisabled}
                         onPress={() => {
-                          if (requiresOpenCodeBeforeInstall) return;
                           if (isInstallingCurrentEnvCard) {
                             void cancelEnvOperation("install", installTarget, "");
                           } else {
@@ -4661,9 +4418,7 @@ function App() {
                     <div className="ccr-empty-title">还没有厂商配置</div>
                     <div className="ccr-empty-desc">
                       {translateUiText(targetEmptyAddText, language)}
-                      {targetDependencyNotice ? (
-                        <span className="ccr-empty-desc-note">{targetDependencyNotice}</span>
-                      ) : null}
+
                     </div>
                   </div>
                 </div>
@@ -4995,7 +4750,7 @@ function App() {
                           <div className="ccr-edit-section-header">
                             <div className="ccr-edit-section-title">
                               <LayersIcon className="h-3.5 w-3.5" />
-                              <span>{targetUsesAppConfigFields(target) ? `${targetDisplayName(target)} 配置字段` : "模型映射"}</span>
+                              <span>{"模型映射"}</span>
                             </div>
                             <Button
                               size="sm"
@@ -5003,46 +4758,10 @@ function App() {
                               onPress={() => addModel(profile.id)}
                             >
                               <PlusIcon className="h-3.5 w-3.5" />
-                              <span>{targetUsesAppConfigFields(target) ? "添加可用模型" : "添加模型"}</span>
+                              <span>{"添加模型"}</span>
                             </Button>
                           </div>
-                          {targetUsesAppConfigFields(target) ? (
-                            <div className="ccr-form-grid two">
-                              <div className="ccr-edit-field">
-                                <label>{target === "oh_my_opencode" || target === "oh_my_pi" ? "路由模型" : target === "openclaw" ? "默认主模型" : "默认模型"}</label>
-                                <Input
-                                  value={gp.upstream_model || gp.model_map.main}
-                                  onChange={(e) => {
-                                    const nextValue = e.currentTarget.value;
-                                    updateGatewayProfile(profile.id, {
-                                      upstream_model: nextValue,
-                                      model_map: {
-                                        ...(gp.model_map ?? defaultModelMap("")),
-                                        main: nextValue,
-                                      },
-                                    });
-                                  }}
-                                />
-                              </div>
-                              {target === "hermes" || target === "opencode" || target === "oh_my_opencode" ? (
-                                <div className="ccr-edit-field">
-                                  <label>{target === "hermes" ? "标题生成模型" : "小模型 small_model"}</label>
-                                  <Input
-                                    value={(gp.model_map ?? defaultModelMap(""))[target === "hermes" ? "sonnet" : "haiku"] ?? ""}
-                                    onChange={(e) => {
-                                      const key = target === "hermes" ? "sonnet" : "haiku";
-                                      updateGatewayProfile(profile.id, {
-                                        model_map: {
-                                          ...(gp.model_map ?? defaultModelMap("")),
-                                          [key]: e.currentTarget.value,
-                                        },
-                                      });
-                                    }}
-                                  />
-                                </div>
-                              ) : null}
-                            </div>
-                          ) : (
+                          {(
                             <div className="ccr-form-grid two">
                               {[
                                 ["main", "主模型"],
@@ -5078,8 +4797,8 @@ function App() {
                               return (
                                 <div key={`${model.name}-${modelIdx}`} className="ccr-model-row">
                                   <Input
-                                    aria-label={targetUsesAppConfigFields(target) ? `${targetDisplayName(target)} 可用模型 ${modelIdx + 1}` : `模型 ${modelIdx + 1}`}
-                                    placeholder={targetUsesAppConfigFields(target) ? gp.upstream_model || gp.model_map.main || "qwen3.7-max" : "claude-fable-5"}
+                                    aria-label={`模型 ${modelIdx + 1}`}
+                                    placeholder={"claude-fable-5-1"}
                                     value={model.name}
                                     onChange={(e) =>
                                       updateModel(profile.id, modelIdx, { name: e.currentTarget.value })

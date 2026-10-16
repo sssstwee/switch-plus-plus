@@ -251,7 +251,7 @@ equal(gatewayRequirementForProfile("codex", responsesPassthroughCodexProfile).de
 equal(gatewayRequirementForProfile("codex", directOpenAiCodexProfile).label, "无需开启");
 notMatch(gatewayRequirementForProfile("codex", deepseekCodexProfile).limitation ?? "", /Anthropic|Messages|search_result/);
 equal(
-  (gatewayRequirementForProfile("codex", deepseekCodexProfile).limitation ?? "").includes("Responses API 当前仅支持 deepseek-v4-flash"),
+  (gatewayRequirementForProfile("codex", deepseekCodexProfile).limitation ?? "").includes("原生 Responses 支持 deepseek-flash 与 deepseek-v4-pro"),
   true,
 );
 notMatch(gatewayRequirementForProfile("claude_cli", chatOnlyClaudeProfile).detail, /OpenAI/);
@@ -283,11 +283,11 @@ equal(
 );
 equal(
   gatewayRequirementForProfile("claude_cli", baseGatewayProfile).limitation,
-  "仍有限制：DeepSeek V4 官方 API 是纯文本模型；Claude Code 的 image、document、search_result 内容块仍不受支持，图片需改用视觉模型或视觉 MCP。",
+  "仍有限制：DeepSeek-Flash（V4.1）支持原生图片；V4-Pro 为纯文本，图片需改用 Flash 或视觉代理；文件与工具内容仍受厂商协议限制。",
 );
 equal(
   gatewayRequirementForProfile("claude_desktop", baseGatewayProfile).limitation,
-  "仍有限制：DeepSeek V4 官方 API 是纯文本模型；Claude Desktop 可在本地网关中选择另一个视觉 profile 先生成图片描述，再交给 DeepSeek。未配置视觉代理时，image、document、search_result 内容块仍不受支持。",
+  "仍有限制：DeepSeek-Flash（V4.1）支持原生图片；V4-Pro 为纯文本，可在 Claude Desktop 中选择视觉代理生成图片描述；文件与工具内容仍受厂商协议限制。",
 );
 equal(
   gatewayRequirementForProfile("claude_cli", minimaxClaudeProfile).limitation,
@@ -297,7 +297,7 @@ equal(gatewayRequirementForProfile("claude_cli", minimaxClaudeProfile).label, "�
 equal(gatewayRequirementForProfile("claude_cli", minimaxClaudeProfile).cornerLabel, "必开");
 equal(
   gatewayRequirementForProfile("claude_cli", kimiCodeClaudeProfile).limitation,
-  "仍有限制：Kimi Code 路径提供 K3 / K2.7 Code；图片和视频能力仍取决于所选模型、请求格式和套餐权限。",
+  "仍有限制：Kimi Code 的 k3 与 kimi-for-coding 等套餐 ID 不同于平台 API 型号；kimi-for-coding 已升级至 K2.8 Preview，能力仍取决于所选模型和套餐权限。",
 );
 equal(
   gatewayRequirementForProfile("claude_cli", siliconFlowClaudeProfile).limitation,
@@ -340,8 +340,4 @@ equal(
 equal(
   gatewayRequirementForTarget("codex", [responsesPassthroughCodexProfile], responsesPassthroughCodexProfile.id).label,
   "必须开启",
-);
-equal(
-  gatewayRequirementForTarget("hermes", [baseGatewayProfile], baseGatewayProfile.id).label,
-  "无需开启",
 );

@@ -19,12 +19,6 @@ export const ENV_CHECK_CARD_ORDER = [
   "codex_desktop",
   "claude_cli",
   "claude_desktop",
-  "opencode",
-  "oh_my_opencode",
-  "openclaw",
-  "hermes",
-  "pi",
-  "oh_my_pi",
 ] as const;
 
 export type AppLanguage = "zh" | "en";
@@ -94,64 +88,6 @@ export type EnvCheckResult = {
   codex_desktop_upgrade_available: boolean;
   codex_desktop_apps: EnvConfigLocation[];
   codex_configs: EnvConfigLocation[];
-  opencode_installed: boolean;
-  opencode_path: string;
-  opencode_version: string;
-  opencode_latest: string;
-  opencode_upgrade_available: boolean;
-  opencode_config_exists: boolean;
-  opencode_installations: EnvCommandInstall[];
-  opencode_apps: EnvConfigLocation[];
-  opencode_configs: EnvConfigLocation[];
-  oh_my_opencode_installed: boolean;
-  oh_my_opencode_path: string;
-  oh_my_opencode_version: string;
-  oh_my_opencode_latest: string;
-  oh_my_opencode_upgrade_available: boolean;
-  oh_my_opencode_config_exists: boolean;
-  oh_my_opencode_installations: EnvCommandInstall[];
-  oh_my_opencode_configs: EnvConfigLocation[];
-  openclaw_installed: boolean;
-  openclaw_path: string;
-  openclaw_version: string;
-  openclaw_latest: string;
-  openclaw_upgrade_available: boolean;
-  openclaw_config_exists: boolean;
-  openclaw_installations: EnvCommandInstall[];
-  openclaw_configs: EnvConfigLocation[];
-  hermes_installed: boolean;
-  hermes_path: string;
-  hermes_version: string;
-  hermes_latest: string;
-  hermes_upgrade_available: boolean;
-  hermes_config_exists: boolean;
-  hermes_installations: EnvCommandInstall[];
-  hermes_configs: EnvConfigLocation[];
-  pi_installed: boolean;
-  pi_path: string;
-  pi_version: string;
-  pi_latest: string;
-  pi_upgrade_available: boolean;
-  pi_config_exists: boolean;
-  pi_installations: EnvCommandInstall[];
-  pi_configs: EnvConfigLocation[];
-  oh_my_pi_installed: boolean;
-  oh_my_pi_path: string;
-  oh_my_pi_version: string;
-  oh_my_pi_latest: string;
-  oh_my_pi_upgrade_available: boolean;
-  oh_my_pi_config_exists: boolean;
-  oh_my_pi_installations: EnvCommandInstall[];
-  oh_my_pi_configs: EnvConfigLocation[];
-  antigravity_installed: boolean;
-  antigravity_path: string;
-  antigravity_version: string;
-  antigravity_latest: string;
-  antigravity_upgrade_available: boolean;
-  antigravity_config_exists: boolean;
-  antigravity_cli_installations: EnvCommandInstall[];
-  antigravity_apps: EnvConfigLocation[];
-  antigravity_configs: EnvConfigLocation[];
 };
 
 export type EnvCheckSessionSnapshot = {

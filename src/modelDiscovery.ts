@@ -223,14 +223,19 @@ export function filterProviderModelCandidates(
   preset: VendorPreset | null | undefined,
   limit = 30,
 ) {
-  const unique = uniqueModels(models);
+  const unique = uniqueModels(models).filter((model) => !/:batch$/i.test(model));
   const isOpenAiPreset = preset?.id === "openai-package" || preset?.id === "openai";
   if (unique.length <= 1 && !isOpenAiPreset) return unique;
 
   if (isOpenAiPreset) {
     const modelOrder = new Map(preset.models.map((model, index) => [model.toLowerCase(), index]));
     return unique
-      .filter((model) => modelOrder.has(model.toLowerCase()))
+      .filter((model) => {
+        if (modelOrder.has(model.toLowerCase())) return true;
+        // Keep current server-advertised model families visible between app updates.
+        const match = /^gpt-(\d+)(?:\.\d+)*-(?:astra|sol|luna)$/i.exec(model);
+        return Boolean(match && Number(match[1]) >= 6);
+      })
       .sort((left, right) => {
         const orderDifference = (modelOrder.get(left.toLowerCase()) ?? modelOrder.size)
           - (modelOrder.get(right.toLowerCase()) ?? modelOrder.size);

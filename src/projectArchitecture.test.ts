@@ -13,8 +13,8 @@ const privateCoreTestOptions = hasPrivateCore ? {} : { skip: "requires-private-c
 test("targetOptions module exports expected values", async () => {
   const mod = await import("./targetOptions.ts");
   assert.equal(Array.isArray(mod.targetOptions), true);
-  assert.equal(mod.targetOptions.length, 11);
-  assert.equal(mod.visibleTargetOptions.length, 10);
+  assert.equal(mod.targetOptions.length, 3);
+  assert.equal(mod.visibleTargetOptions.length, 3);
   assert.equal(typeof mod.claudeDesktopConfigPathLabel, "string");
 });
 
@@ -49,29 +49,29 @@ test("subscription proxy is exposed as a local-only CLIProxyAPI tool", privateCo
   assert.deepEqual(tauriConfig.bundle.externalBin, ["binaries/cliproxyapi"]);
   assert.equal(tauriConfig.bundle.resources.includes("third-party/CLIProxyAPI-LICENSE.txt"), true);
   assert.equal(packageJson.scripts["prepare:cliproxyapi"], "node scripts/prepare-cliproxyapi-sidecar.mjs");
-  assert.equal(prepareSidecar.includes('const VERSION = "7.3.15"'), true);
-  assert.equal(prepareSidecar.includes("c1e49c148a94c476dc43a6a0eed28bca34239d5153ebb7792048d8c18f3b92f0"), true);
+  assert.equal(prepareSidecar.includes('const VERSION = "8.0.31"'), true);
+  assert.equal(prepareSidecar.includes("36e193a737c4821aa122cf35c293c13f2b16c10d56d4ac4b19ced197fab19a79"), true);
   assert.equal(prepareSidecar.includes("router-for-me/CLIProxyAPI/releases/download"), true);
   assert.equal(releaseWorkflow.includes("CLIPROXYAPI_TARGET: aarch64-apple-darwin"), true);
   assert.equal(proxyView.includes("安装 CLIProxyAPI"), false);
   assert.equal(proxyView.includes("已内置"), true);
   assert.equal(proxyView.includes("已同步应用"), true);
   assert.equal(proxyView.includes("Codex 与 ChatGPT 应用保持各自官方登录和配置，不同步、也不经过此网关。"), true);
-  assert.equal(proxyView.includes('type ConnectionFieldKey = "apiKey" | "baseUrl" | "model"'), true);
+  assert.equal(proxyView.includes('type ConnectionFieldKey = "apiKey" | "baseUrl" | "model"'), false);
   assert.equal(proxyView.includes("添加到配置列表"), false);
   assert.equal(proxyView.includes("复制启动命令"), false);
   assert.equal(proxyConfig.includes("buildClaudeCodeLaunchCommand"), false);
   assert.equal(proxyConfig.includes('"switchpp-chatgpt-subscription"'), true);
   assert.equal(proxyConfig.includes("syncSubscriptionProxyProfiles"), true);
   assert.equal(app.includes("currentState.claude_desktop"), true);
-  assert.equal(app.includes("currentState.grok_build"), true);
+  assert.equal(app.includes("currentState.grok_build"), false);
   assert.equal(app.includes("onProxyStatusChange={syncSubscriptionProxyAppProfiles}"), true);
   assert.equal(app.includes("syncedApplications={subscriptionProxySyncedApplications}"), true);
   const subscriptionSyncStart = app.indexOf("function appStateWithSubscriptionProxyProfiles(");
   const subscriptionSyncEnd = app.indexOf("\nfunction App()", subscriptionSyncStart);
   const subscriptionSyncSource = app.slice(subscriptionSyncStart, subscriptionSyncEnd);
   assert.equal(subscriptionSyncSource.includes("currentState.codex"), false);
-  assert.equal(privateCore.includes("is_subscription_proxy_profile"), true);
+  assert.equal(privateCore.includes("is_subscription_proxy_upstream_base_url"), true);
   assert.equal(privateModule.includes("ProxyConfigScope::SubscriptionOpenAi"), true);
   assert.equal(privateModule.includes("gateway_base_url"), true);
   assert.equal(privateModule.includes('host: "127.0.0.1"'), true);
@@ -119,7 +119,7 @@ test("public branding uses Switch++ naming", () => {
     "icons/tray-template.png",
     "third-party/CLIProxyAPI-LICENSE.txt",
   ]);
-  assert.match(cargoToml, /features = \["macos-private-api", "tray-icon", "image-png"\]/);
+  assert.match(cargoToml, /features = \["tray-icon", "image-png"\]/);
   assert.equal(packageJson.scripts.dev, 'PATH="$HOME/.cargo/bin:$PATH" tauri dev --runner ../scripts/tauri-dev-runner.sh');
   assert.match(cargoToml, /^name = "switch-plus-plus"$/m);
   assert.match(cargoToml, /^name = "agent_switch_lib"$/m);
@@ -455,7 +455,7 @@ test("App delegates app shell chrome behavior to a feature hook", () => {
   assert.equal(hookSource.includes("function handleSidebarResizePointerDown"), false);
   assert.equal(hookSource.includes("function toggleSidebarCollapsed"), false);
   assert.equal(hookSource.includes("function runAppUpdateCheck"), true);
-  assert.equal(hookSource.includes("function startWindowDrag"), true);
+  assert.equal(hookSource.includes("function startWindowDrag"), false);
   assert.equal(appTsx.includes("function handleSidebarResizePointerDown"), false);
   assert.equal(appTsx.includes("function toggleSidebarCollapsed"), false);
   assert.equal(appTsx.includes("function runAppUpdateCheck"), false);
@@ -486,19 +486,6 @@ test("App delegates Claude Desktop effective config markup to config-options", (
   assert.equal(panelSource.includes("inferenceGatewayBaseUrl"), true);
   assert.equal(appTsx.includes("function renderClaudeDesktopEffectiveConfig"), false);
   assert.equal(appTsx.includes("Claude Desktop 只读取网关、认证和模型列表等配置。"), false);
-});
-
-test("App delegates env check card assembly to env-check feature", () => {
-  const appTsx = readSource("./App.tsx");
-  const cardsUrl = new URL("./features/env-check/envCheckCards.ts", import.meta.url);
-
-  assert.equal(existsSync(cardsUrl), true);
-  const cardsSource = readSource("./features/env-check/envCheckCards.ts");
-  assert.equal(cardsSource.includes("function buildEnvCheckCards"), true);
-  assert.equal(cardsSource.includes("Claude Code"), true);
-  assert.equal(cardsSource.includes("OpenClaw"), true);
-  assert.equal(appTsx.includes("const envCheckCards: Array<{"), false);
-  assert.equal(appTsx.includes("请安装 OpenClaw；推荐使用官方安装脚本或 npm i -g openclaw"), false);
 });
 
 test("private core delegates MCP and skills commands to modules", privateCoreTestOptions, () => {

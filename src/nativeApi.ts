@@ -1,9 +1,6 @@
 import type {
   AppState,
   ClaudeDesktopConfigFiles,
-  CodexMemoryCorrectionRequest,
-  CodexMemoryOverview,
-  CodexMemorySettings,
   CodexProxyCallRecord,
   CodexProxyCallsPage,
   CodexProxyOverview,
@@ -95,12 +92,6 @@ export const nativeApi = {
   saveMcpServer: (server: McpServerData) => invokeNative<void>(nativeCommand.saveMcpServer, { server }),
   deleteMcpServer: (name: string) =>
     invokeNative<McpServerData[]>(nativeCommand.deleteMcpServer, { name }),
-  codexMemoryOverview: () =>
-    invokeNative<CodexMemoryOverview>(nativeCommand.codexMemoryOverview),
-  saveCodexMemorySettings: (settings: CodexMemorySettings) =>
-    invokeNative<CodexMemoryOverview>(nativeCommand.saveCodexMemorySettings, { settings }),
-  createCodexMemoryCorrection: (request: CodexMemoryCorrectionRequest) =>
-    invokeNative<CodexMemoryOverview>(nativeCommand.createCodexMemoryCorrection, { request }),
   listSkills: () => invokeNative<SkillData[]>(nativeCommand.listSkills),
   getSkillContent: (name: string) => invokeNative<string>(nativeCommand.getSkillContent, { name }),
   deleteSkill: (name: string) => invokeNative<SkillData[]>(nativeCommand.deleteSkill, { name }),

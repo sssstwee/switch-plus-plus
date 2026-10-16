@@ -10,7 +10,6 @@ export type AppView =
   | "switch"
   | "mcp"
   | "gateway"
-  | "memory"
   | "subscription_proxy";
 
 type AppUiStore = {

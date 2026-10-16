@@ -236,25 +236,12 @@ export function buildClaudeDesktopMetaConfigPreview(
   );
 }
 
-function gatewayProviderId(form: Pick<AddForm, "display_name" | "base_url">) {
-  const source = form.display_name || form.base_url || "agent-switch-provider";
-  const normalized = source
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  if (!normalized) return "agent-switch-provider";
-  if (normalized.startsWith("agent-switch-")) return normalized;
-  return `agent-switch-${normalized.replace(/^code3p-/, "")}`;
+function primaryGatewayModel(form: AddForm) {
+  return form.model || form.model_map.main || "gpt-6-astra";
 }
 
 function escapeTomlString(value: string) {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-}
-
-function primaryGatewayModel(form: AddForm) {
-  return form.model || form.model_map.main || "gpt-6-astra";
 }
 
 const CODEX_PROXY_MODEL_SLOT_PRIMARY = "gpt-6-astra";
@@ -267,101 +254,6 @@ const CODEX_PROVIDER_DISPLAY_NAME = "Switch++";
 
 function codexClientModel(form: AddForm) {
   return codexFormUsesProxy(form) ? CODEX_PROXY_MODEL_SLOT_PRIMARY : primaryGatewayModel(form);
-}
-
-function hermesModelNames(form: AddForm) {
-  return appProviderModelNames(form);
-}
-
-function appProviderModelNames(form: AddForm) {
-  const names = [
-    primaryGatewayModel(form),
-    ...(form.models ?? []),
-  ]
-    .map((model) => model.trim())
-    .filter(Boolean);
-  return Array.from(new Set(names));
-}
-
-function grokBuildApiBackend(form: AddForm) {
-  if (form.api_format === "openai_responses") return "responses";
-  if (form.api_format === "anthropic") return "messages";
-  return "chat_completions";
-}
-
-function grokBuildModelAlias(index: number) {
-  return index === 0 ? "switchpp" : `switchpp-${index + 1}`;
-}
-
-export function buildGrokBuildConfigPreview(form: AddForm) {
-  const modelNames = appProviderModelNames(form);
-  const apiBackend = grokBuildApiBackend(form);
-  const contextWindow = form.supports_1m_context ? 1_000_000 : 200_000;
-  const lines = [
-    "[models]",
-    'default = "switchpp"',
-  ];
-
-  modelNames.forEach((model, index) => {
-    const alias = grokBuildModelAlias(index);
-    const displayName = index === 0
-      ? (form.display_name || model)
-      : `${form.display_name || "Switch++"} · ${model}`;
-    lines.push(
-      "",
-      `[model.${alias}]`,
-      `model = "${escapeTomlString(model)}"`,
-      `base_url = "${escapeTomlString(form.base_url)}"`,
-      `name = "${escapeTomlString(displayName)}"`,
-      `api_backend = "${apiBackend}"`,
-      `context_window = ${contextWindow}`,
-    );
-    if (form.note.trim()) {
-      lines.push(`description = "${escapeTomlString(form.note.trim())}"`);
-    }
-    if (form.api_key.trim()) {
-      if (form.api_format === "anthropic") {
-        lines.push(
-          `extra_headers = { "x-api-key" = "${escapeTomlString(form.api_key.trim())}", "anthropic-version" = "2023-06-01" }`,
-        );
-      } else {
-        lines.push(`api_key = "${escapeTomlString(form.api_key.trim())}"`);
-      }
-    }
-  });
-
-  return `${lines.join("\n")}\n`;
-}
-
-function hermesTitleGenerationModel(form: AddForm) {
-  return form.model_map.sonnet.trim() || primaryGatewayModel(form);
-}
-
-function openCodeProviderNpm(form: AddForm) {
-  if (form.api_format === "anthropic") return "@ai-sdk/anthropic";
-  return form.api_format === "openai_responses" ? "@ai-sdk/openai" : "@ai-sdk/openai-compatible";
-}
-
-function openClawApiFormat(form: AddForm) {
-  if (form.api_format === "openai_responses") return "openai-responses";
-  if (form.api_format === "anthropic") return "anthropic-messages";
-  if (form.api_format === "gemini") return "google-generative-ai";
-  return "openai-completions";
-}
-
-function hermesApiMode(form: AddForm) {
-  if (form.api_format === "openai_responses") return "codex_responses";
-  if (form.api_format === "anthropic") return "anthropic_messages";
-  return "chat_completions";
-}
-
-function hermesProviderId(form: AddForm) {
-  if (form.api_format === "gemini") return "gemini";
-  return "switch++";
-}
-
-function yamlQuote(value: string) {
-  return JSON.stringify(value);
 }
 
 export function buildCodexAuthJsonTemplate(apiKey = "", useLocalGatewayToken = false) {
@@ -451,12 +343,23 @@ export function buildCodexModelCatalogPreview(form: AddForm, extraModels?: strin
     const isDeepSeekV4Responses = form.compat_mode === "direct"
       && form.api_format === "openai_responses"
       && form.base_url.toLowerCase().includes("api.deepseek.com")
-      && /^deepseek-v4-(flash|pro)$/i.test(displayName);
+      && /^(?:deepseek-flash|deepseek-v4-(?:flash(?:-vision-exp)?|pro))$/i.test(displayName);
+    const isMinimaxM31Responses = form.compat_mode === "direct"
+      && form.api_format === "openai_responses"
+      && /^https:\/\/api\.(?:minimax\.io|minimaxi\.com)(?:\/|$)/i.test(form.base_url)
+      && /^MiniMax-M3\.1-Flash-Preview$/i.test(displayName);
+    const isOpenAiGpt6Responses = !codexFormUsesProxy(form)
+      && /^https:\/\/api\.openai\.com\/v1\/?$/i.test(form.base_url.trim())
+      && /^gpt-6(?:\.\d+)*-(?:astra|sol|luna)$/i.test(displayName);
+    const isNativeVendor = isDeepSeekV4Responses || isMinimaxM31Responses;
+    const supportsImages = (isDeepSeekV4Responses && !/pro$/i.test(displayName)) || isMinimaxM31Responses || isOpenAiGpt6Responses;
     const contextWindow = isDeepSeekV4Responses
       ? 1_048_576
+      : isMinimaxM31Responses ? 524_288
+      : isOpenAiGpt6Responses ? (form.supports_1m_context ? 872_000 : 272_000)
       : codexCatalogContextWindowForModel(form, displayName);
     const compactLimit = Math.max(8_000, Math.floor(contextWindow * 0.8));
-    const truncationLimit = isDeepSeekV4Responses
+    const truncationLimit = isNativeVendor
       ? 10_000
       : Math.min(64_000, Math.max(8_000, Math.floor(contextWindow * 0.32)));
     return {
@@ -468,10 +371,10 @@ export function buildCodexModelCatalogPreview(form: AddForm, extraModels?: strin
       hidden: false,
       wire_api: "responses",
       context_window: contextWindow,
-      max_context_window: contextWindow,
-      auto_compact_token_limit: isDeepSeekV4Responses ? null : compactLimit,
+      max_context_window: isOpenAiGpt6Responses ? 872_000 : contextWindow,
+      auto_compact_token_limit: isNativeVendor ? null : compactLimit,
       truncation_policy: { mode: "tokens", limit: truncationLimit },
-      default_reasoning_level: isDeepSeekV4Responses ? "high" : "medium",
+      default_reasoning_level: isDeepSeekV4Responses ? "high" : isMinimaxM31Responses ? "max" : isOpenAiGpt6Responses && displayName === "gpt-6.1-sol" ? "low" : "medium",
       supported_reasoning_levels: isDeepSeekV4Responses
         ? [
             { effort: "low", description: "Fast responses with lighter reasoning" },
@@ -483,22 +386,23 @@ export function buildCodexModelCatalogPreview(form: AddForm, extraModels?: strin
             { effort: "medium", description: "Balanced speed and reasoning" },
             { effort: "high", description: "Deeper reasoning" },
             { effort: "xhigh", description: "Maximum reasoning where supported" },
+            ...(isMinimaxM31Responses || isOpenAiGpt6Responses ? [{ effort: "max", description: "Maximum reasoning depth" }] : []),
           ],
       default_reasoning_summary: "none",
-      reasoning_summary_format: isDeepSeekV4Responses ? "experimental" : "none",
-      supports_reasoning_summaries: false,
+      reasoning_summary_format: isNativeVendor ? "experimental" : "none",
+      supports_reasoning_summaries: isMinimaxM31Responses || isOpenAiGpt6Responses,
       default_verbosity: "low",
-      support_verbosity: isDeepSeekV4Responses,
+      support_verbosity: isDeepSeekV4Responses || isOpenAiGpt6Responses,
       apply_patch_tool_type: "freeform",
-      web_search_tool_type: isDeepSeekV4Responses ? "text" : "text_and_image",
-      supports_search_tool: isDeepSeekV4Responses,
+      web_search_tool_type: isNativeVendor ? "text" : "text_and_image",
+      supports_search_tool: isNativeVendor || isOpenAiGpt6Responses,
       supports_parallel_tool_calls: true,
       experimental_supported_tools: [],
-      input_modalities: ["text"],
-      supports_image_detail_original: false,
+      input_modalities: supportsImages ? ["text", "image"] : ["text"],
+      supports_image_detail_original: isDeepSeekV4Responses && supportsImages || isOpenAiGpt6Responses,
       shell_type: "shell_command",
       visibility: "list",
-      minimal_client_version: isDeepSeekV4Responses ? "0.144.0" : "0.0.1",
+      minimal_client_version: isDeepSeekV4Responses ? "0.144.0" : isMinimaxM31Responses ? "0.146.0" : isOpenAiGpt6Responses ? (/^gpt-6-(?:sol|luna)$/i.test(displayName) ? "0.155.0" : "0.153.0") : "0.0.1",
       supported_in_api: true,
       availability_nux: null,
       upgrade: null,
@@ -511,10 +415,10 @@ export function buildCodexModelCatalogPreview(form: AddForm, extraModels?: strin
         instructions_template: "You are Codex running on {model_name} through Switch++. Be a helpful, direct coding collaborator.",
         instructions_variables: { model_name: displayName },
       },
-      ...(isDeepSeekV4Responses ? {
+      ...(isNativeVendor ? {
         effective_context_window_percent: 95,
         comp_hash: "3000",
-        tool_mode: null,
+        tool_mode: isMinimaxM31Responses ? "code_mode_only" : null,
         multi_agent_version: "v2",
         use_responses_lite: false,
         include_skills_usage_instructions: false,
@@ -548,6 +452,8 @@ export function buildCodexConfigTomlTemplate(form: AddForm, preset: VendorPreset
   const model = codexClientModel(form);
   const optionParts = buildCodexConfigOptionTomlParts(sanitizeCodexConfigOptionsForForm(form, preset));
   const compatComment = codexGatewayCompatComment(form);
+  const isNativeVendor = !codexFormUsesProxy(form)
+    && (preset?.id === "deepseek" || preset?.id.startsWith("minimax"));
 
   return [
     compatComment,
@@ -556,10 +462,11 @@ export function buildCodexConfigTomlTemplate(form: AddForm, preset: VendorPreset
     `model_provider = "${escapeTomlString(providerId)}"`,
     `model = "${escapeTomlString(model)}"`,
     `model_catalog_json = "${escapeTomlString(codexModelCatalogPreviewPath())}"`,
-    ...(preset?.id === "deepseek" && form.compat_mode === "direct"
-      ? ['preferred_auth_method = "apikey"', 'forced_login_method = "api"']
+    ...(isNativeVendor
+      ? ['forced_login_method = "api"']
       : []),
     ...optionParts.topLevelLines,
+    ...(isNativeVendor ? ['web_search = "disabled"'] : []),
     "",
     `[model_providers.${providerId}]`,
     `name = "${escapeTomlString(CODEX_PROVIDER_DISPLAY_NAME)}"`,
@@ -571,6 +478,12 @@ export function buildCodexConfigTomlTemplate(form: AddForm, preset: VendorPreset
     `stream_idle_timeout_ms = 600000`,
     ...optionParts.providerLines,
     ...optionParts.sectionLines,
+    ...(isNativeVendor ? [
+      "",
+      "[desktop]",
+      `enabled-reasoning-efforts = ${model.startsWith("MiniMax-")
+        ? '["low", "medium", "high", "xhigh", "max"]' : '["low", "high", "max"]'}`,
+    ] : []),
   ].join("\n");
 }
 
@@ -597,262 +510,8 @@ export function buildGatewayModels(
   }));
 }
 
-export function buildOpenCodeConfigPreview(form: AddForm) {
-  const providerId = gatewayProviderId(form);
-  const model = primaryGatewayModel(form);
-  const models = Object.fromEntries(
-    appProviderModelNames(form).map((name) => [name, { name }]),
-  );
-  const options: Record<string, unknown> = {
-    baseURL: form.base_url,
-  };
-  if (form.api_key.trim()) options.apiKey = form.api_key.trim();
-  const preview: Record<string, unknown> = {
-    "$schema": "https://opencode.ai/config.json",
-    model: `${providerId}/${model}`,
-    small_model: `${providerId}/${form.model_map.haiku || model}`,
-    provider: {
-      [providerId]: {
-        npm: openCodeProviderNpm(form),
-        name: form.display_name || providerId,
-        options,
-        models,
-      },
-    },
-  };
-
-  if (form.config_options.opencode_disable_share) preview.share = "disabled";
-  if (form.config_options.opencode_disable_autoupdate) preview.autoupdate = false;
-  if (form.config_options.opencode_provider_allowlist) preview.enabled_providers = [providerId];
-  if (form.config_options.opencode_require_approval) {
-    preview.permission = {
-      edit: "ask",
-      bash: "ask",
-    };
-  }
-
-  return JSON.stringify(
-    preview,
-    null,
-    2,
-  );
-}
-
-export function buildOhMyOpenCodeConfigPreview(form: AddForm) {
-  const providerId = gatewayProviderId(form);
-  const model = primaryGatewayModel(form);
-  const modelRef = `${providerId}/${model}`;
-  return JSON.stringify(
-    {
-      "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
-      agents: {
-        sisyphus: { model: modelRef },
-        oracle: { model: modelRef },
-        explore: { model: modelRef },
-      },
-      categories: {
-        quick: { model: modelRef },
-        deep: { model: modelRef },
-        "business-logic": { model: modelRef },
-      },
-    },
-    null,
-    2,
-  );
-}
-
-export function buildOpenClawConfigPreview(form: AddForm) {
-  const providerId = gatewayProviderId(form);
-  const model = primaryGatewayModel(form);
-  const modelRef = `${providerId}/${model}`;
-  const defaults: Record<string, unknown> = {
-    model: {
-      primary: modelRef,
-    },
-  };
-  if (form.config_options.openclaw_model_allowlist) {
-    defaults.models = {
-      [modelRef]: {
-        alias: providerId,
-      },
-    };
-  }
-  if (form.config_options.openclaw_sandbox_non_main) {
-    defaults.sandbox = {
-      mode: "non-main",
-      scope: "agent",
-    };
-  }
-  const preview: Record<string, unknown> = {
-    models: {
-      mode: "merge",
-      providers: {
-        [providerId]: {
-          baseUrl: form.base_url,
-          apiKey: form.api_key,
-          api: openClawApiFormat(form),
-          models: appProviderModelNames(form).map((name) => ({
-            id: name,
-            name,
-            contextWindow: 262144,
-          })),
-        },
-      },
-    },
-    agents: {
-      defaults,
-    },
-  };
-
-  if (form.config_options.openclaw_disable_channel_health || form.config_options.openclaw_handshake_timeout_long) {
-    preview.gateway = {
-      ...(form.config_options.openclaw_disable_channel_health ? { channelHealthCheckMinutes: 0 } : {}),
-      ...(form.config_options.openclaw_handshake_timeout_long ? { handshakeTimeoutMs: 30000 } : {}),
-    };
-  }
-
-  return JSON.stringify(
-    preview,
-    null,
-    2,
-  );
-}
-
-export function buildHermesConfigPreview(form: AddForm) {
-  const providerId = hermesProviderId(form);
-  const model = primaryGatewayModel(form);
-  const titleModel = hermesTitleGenerationModel(form);
-  const models = hermesModelNames(form);
-  const modelEntries = models
-    .map((name) => `      ${yamlQuote(name)}:\n        context_length: 262144`)
-    .join("\n");
-
-  if (form.api_format === "gemini") {
-    return [
-      "model:",
-      `  default: ${yamlQuote(model)}`,
-      `  provider: ${yamlQuote(providerId)}`,
-      `  base_url: ${yamlQuote(form.base_url)}`,
-      "",
-      "auxiliary:",
-      "  title_generation:",
-      `    provider: ${yamlQuote(providerId)}`,
-      `    model: ${yamlQuote(titleModel)}`,
-      ...(form.config_options.hermes_worktree ? ["", "worktree: true"] : []),
-      ...(form.config_options.hermes_streaming ? ["", "display:", "  streaming: true"] : []),
-      ...(form.config_options.hermes_smart_approvals ? ["", "approvals:", "  mode: smart"] : []),
-      ...(form.config_options.hermes_disable_memory ? ["", "memory:", "  memory_enabled: false", "  user_profile_enabled: false"] : []),
-    ].join("\n");
-  }
-
-  return [
-    "model:",
-    `  default: ${yamlQuote(model)}`,
-    `  provider: ${yamlQuote(providerId)}`,
-    "",
-    "custom_providers:",
-    `  - name: ${yamlQuote(providerId)}`,
-    `    base_url: ${yamlQuote(form.base_url)}`,
-    `    api_key: ${yamlQuote(form.api_key)}`,
-    `    api_mode: ${yamlQuote(hermesApiMode(form))}`,
-    `    model: ${yamlQuote(model)}`,
-    "    models:",
-    modelEntries,
-    "",
-    "auxiliary:",
-    "  title_generation:",
-    `    provider: ${yamlQuote(providerId)}`,
-    `    model: ${yamlQuote(titleModel)}`,
-    ...(form.config_options.hermes_worktree ? ["", "worktree: true"] : []),
-    ...(form.config_options.hermes_streaming ? ["", "display:", "  streaming: true"] : []),
-    ...(form.config_options.hermes_smart_approvals ? ["", "approvals:", "  mode: smart"] : []),
-    ...(form.config_options.hermes_disable_memory ? ["", "memory:", "  memory_enabled: false", "  user_profile_enabled: false"] : []),
-  ].join("\n");
-}
-
-export function buildPiConfigPreview(form: AddForm) {
-  const providerId = gatewayProviderId(form);
-  const model = primaryGatewayModel(form);
-  return JSON.stringify(
-    {
-      "models.json": {
-        providers: {
-          [providerId]: {
-            baseUrl: form.base_url,
-            api: openClawApiFormat(form),
-            apiKey: form.api_key || "PROVIDER_API_KEY",
-            authHeader: true,
-            models: appProviderModelNames(form).map((name) => ({
-              id: name,
-              name,
-              reasoning: form.api_format !== "gemini",
-              contextWindow: 262144,
-              maxTokens: 32768,
-            })),
-          },
-        },
-      },
-      "settings.json": {
-        defaultProvider: providerId,
-        defaultModel: model,
-      },
-    },
-    null,
-    2,
-  );
-}
-
-export function buildOhMyPiConfigPreview(form: AddForm) {
-  const providerId = gatewayProviderId(form);
-  const model = primaryGatewayModel(form);
-  const modelRef = `${providerId}/${model}`;
-  const models = appProviderModelNames(form)
-    .map((name) => `          - id: ${yamlQuote(name)}\n            name: ${yamlQuote(name)}\n            reasoning: ${form.api_format === "gemini" ? "false" : "true"}\n            contextWindow: 262144\n            maxTokens: 32768`)
-    .join("\n");
-
-  return [
-    "providers:",
-    `  ${providerId}:`,
-    `    baseUrl: ${yamlQuote(form.base_url)}`,
-    `    api: ${yamlQuote(openClawApiFormat(form))}`,
-    `    apiKey: ${yamlQuote(form.api_key || "PROVIDER_API_KEY")}`,
-    "    authHeader: true",
-    "    models:",
-    models,
-    "",
-    "routing:",
-    `  model: ${yamlQuote(modelRef)}`,
-    "  default_run_agent: sisyphus",
-    "  agents:",
-    `    sisyphus:\n      model: ${yamlQuote(modelRef)}`,
-    `    oracle:\n      model: ${yamlQuote(modelRef)}`,
-    "  categories:",
-    `    quick:\n      model: ${yamlQuote(modelRef)}`,
-    `    deep:\n      model: ${yamlQuote(modelRef)}`,
-  ].join("\n");
-}
-
-export function buildAntigravityConfigPreview() {
-  return JSON.stringify(
-    {
-      "官方状态": "Antigravity 当前公开文档只确认 settings.json、mcp_config.json 和交互式 /model；未公开第三方模型 Base URL/API Key 的稳定写入字段。",
-      "配置文件": "~/.gemini/antigravity-cli/settings.json",
-      "说明": "Switch++ 暂不写入未知模型字段，避免破坏 Antigravity 设置。请先在 Antigravity 内使用 /model 或设置界面选择模型。",
-    },
-    null,
-    2,
-  );
-}
-
 export function buildTargetConfigPreview(form: AddForm, target: TargetKey = "claude_cli") {
-  if (target === "grok_build") return buildGrokBuildConfigPreview(form);
-  if (target === "opencode") return buildOpenCodeConfigPreview(form);
-  if (target === "oh_my_opencode") return buildOhMyOpenCodeConfigPreview(form);
-  if (target === "openclaw") return buildOpenClawConfigPreview(form);
-  if (target === "hermes") return buildHermesConfigPreview(form);
-  if (target === "pi") return buildPiConfigPreview(form);
-  if (target === "oh_my_pi") return buildOhMyPiConfigPreview(form);
-  if (target === "antigravity") return buildAntigravityConfigPreview();
+
   return buildGatewayConfigPreview(form, target);
 }
 

@@ -4,13 +4,11 @@ import type { SubscriptionProxyStatus } from "./appTypes.ts";
 import { isSubscriptionProxyBaseUrl } from "./gatewayProfile.ts";
 import {
   buildClaudeCodeConnectionSummary,
-  buildCursorConnectionSummary,
   buildSubscriptionProxyProfile,
   isSubscriptionProxyProfileId,
   selectSubscriptionProxyModel,
   SUBSCRIPTION_PROXY_CLAUDE_DESKTOP_PROFILE_ID,
   SUBSCRIPTION_PROXY_PROFILE_ID,
-  subscriptionProxyProfileIdForTarget,
   subscriptionProxyUsableModels,
   syncSubscriptionProxyProfiles,
 } from "./subscriptionProxyConfig.ts";
@@ -112,52 +110,6 @@ test("subscription proxy excludes task-only and image models and prefers the new
   );
 });
 
-test("subscription proxy creates target-specific Claude Desktop and Grok Build profiles", () => {
-  const desktop = buildSubscriptionProxyProfile(
-    clientConfig,
-    "claude_desktop",
-    undefined,
-    123,
-  );
-  assert.equal(
-    desktop.id,
-    SUBSCRIPTION_PROXY_CLAUDE_DESKTOP_PROFILE_ID,
-  );
-  assert.match(
-    desktop.id,
-    /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/,
-  );
-  assert.equal(desktop.base_url, "http://127.0.0.1:8317");
-  assert.equal(desktop.api_format, "anthropic");
-  assert.equal(desktop.auth_field, "ANTHROPIC_AUTH_TOKEN");
-  assert.deepEqual(desktop.model_map, {
-    main: "Fable5",
-    haiku: "Fable5",
-    sonnet: "Fable5",
-    opus: "Fable5",
-  });
-  assert.deepEqual(desktop.provider_model_map, {
-    main: "gpt-5.4",
-    haiku: "gpt-5.4",
-    sonnet: "gpt-5.4",
-    opus: "gpt-5.4",
-  });
-  assert.deepEqual(desktop.models, [{ name: "Fable5", supports_1m: false }]);
-
-  const grokBuild = buildSubscriptionProxyProfile(
-    clientConfig,
-    "grok_build",
-    undefined,
-    123,
-  );
-  assert.equal(grokBuild.base_url, "http://127.0.0.1:8317/v1");
-  assert.equal(grokBuild.api_format, "openai_responses");
-  assert.equal(grokBuild.auth_field, "OPENAI_API_KEY");
-  assert.equal(grokBuild.compat_mode, "direct");
-  assert.equal(grokBuild.model_map.main, "gpt-5.4");
-  assert.deepEqual(grokBuild.models, [{ name: "gpt-5.4", supports_1m: false }]);
-});
-
 test("re-syncing the subscription proxy updates the stable profile without losing preferences", () => {
   const existing = buildSubscriptionProxyProfile(
     clientConfig,
@@ -187,38 +139,6 @@ test("re-syncing the subscription proxy updates the stable profile without losin
   assert.equal(updated.model_map.main, "gpt-5.5");
   assert.equal(updated.config_options.disable_auto_update, true);
   assert.equal(updated.updated_at, 456);
-});
-
-test("running proxy automatically adds one idempotent profile to every supported target", () => {
-  for (const target of ["claude_cli", "claude_desktop", "grok_build"] as const) {
-    const added = syncSubscriptionProxyProfiles(
-      [],
-      null,
-      runningStatus,
-      target,
-      "",
-      123,
-    );
-    assert.equal(added.action, "added");
-    assert.equal(added.profiles.length, 1);
-    assert.equal(
-      added.profiles[0].id,
-      subscriptionProxyProfileIdForTarget(target),
-    );
-    assert.equal(added.profiles[0].upstream_model, "gpt-5.6-sol");
-
-    const unchanged = syncSubscriptionProxyProfiles(
-      added.profiles,
-      null,
-      runningStatus,
-      target,
-      "gpt-5.6-sol",
-      456,
-    );
-    assert.equal(unchanged.action, "unchanged");
-    assert.equal(unchanged.profiles, added.profiles);
-    assert.equal(unchanged.profiles[0].updated_at, 123);
-  }
 });
 
 test("Claude Desktop migrates the legacy automatic profile and applied marker to a UUID", () => {
@@ -287,26 +207,6 @@ test("model selection updates and deduplicates the automatic profile", () => {
   );
 });
 
-test("stopped proxy removes its profile and clears a dangling applied marker", () => {
-  const existing = buildSubscriptionProxyProfile(
-    clientConfig,
-    "grok_build",
-    undefined,
-    123,
-  );
-  const removed = syncSubscriptionProxyProfiles(
-    [existing],
-    SUBSCRIPTION_PROXY_PROFILE_ID,
-    { ...runningStatus, running: false },
-    "grok_build",
-  );
-
-  assert.equal(removed.action, "removed");
-  assert.deepEqual(removed.profiles, []);
-  assert.equal(removed.appliedProfileId, null);
-  assert.equal(removed.clearedAppliedProfile, true);
-});
-
 test("stopped proxy removes both current and legacy Claude Desktop automatic profiles", () => {
   const current = buildSubscriptionProxyProfile(
     clientConfig,
@@ -329,26 +229,4 @@ test("stopped proxy removes both current and legacy Claude Desktop automatic pro
   assert.deepEqual(removed.profiles, []);
   assert.equal(removed.appliedProfileId, null);
   assert.equal(removed.clearedAppliedProfile, true);
-});
-
-test("Cursor summary keeps the OpenAI-compatible v1 base URL explicit", () => {
-  assert.equal(
-    buildCursorConnectionSummary(clientConfig),
-    [
-      "Base URL: http://127.0.0.1:8317/v1",
-      "API Key: sk-switchpp-local",
-      "Model: gpt-5.4",
-    ].join("\n"),
-  );
-  assert.equal(
-    buildCursorConnectionSummary({
-      ...clientConfig,
-      baseUrl: runningStatus.gateway_base_url,
-    }),
-    [
-      "Base URL: http://127.0.0.1:23457/subscription/v1",
-      "API Key: sk-switchpp-local",
-      "Model: gpt-5.4",
-    ].join("\n"),
-  );
 });

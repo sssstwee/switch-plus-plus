@@ -2,14 +2,14 @@
 
 中文版本: [README.md](README.md)
 
-Switch++ is a desktop configuration switcher, model router, and local compatibility gateway for bringing third-party models into Claude Code, Claude Desktop, Codex CLI, Codex Desktop, and common local AI coding agents. It also matches common searches such as Claude Code third-party models, Codex third-party models, Codex config switching, Claude Desktop local gateway, OpenAI-compatible proxy, and Anthropic-compatible proxy.
+Switch++ is a desktop configuration switcher, model router, and local compatibility gateway for bringing third-party models into Claude Code, Claude Desktop, Codex CLI, and Codex Desktop. It also matches common searches such as Claude Code third-party models, Codex third-party models, Codex config switching, Claude Desktop local gateway, OpenAI-compatible proxy, and Anthropic-compatible proxy.
 
 - Downloads: https://github.com/sssstwee/switch-plus-plus/releases/latest
 - Download page and user guide: https://sssstwee.github.io/switch-plus-plus/
 
 ## What It Solves
 
-- Manage multiple Claude, Codex, and local-agent model profiles from one desktop app.
+- Manage multiple Claude Code, Claude Desktop, and Codex model profiles from one desktop app.
 - Switch between official-account profiles and third-party provider profiles.
 - Use a local compatibility gateway to bridge Anthropic, OpenAI, Responses, and Chat Completions protocol differences.
 - Preview JSON / TOML before writing local config, with backups created before changes are applied.
@@ -52,12 +52,6 @@ Switch++ is a desktop configuration switcher, model router, and local compatibil
 | Claude Code | CLI settings, model mapping, gateway environment variables, feature flags | `~/.claude/settings.json` |
 | Claude Desktop | Desktop third-party config library | macOS: `~/Library/Application Support/Claude-3p/configLibrary`; Windows: `%APPDATA%\Claude-3p\configLibrary` |
 | Codex | Official login config and third-party provider config | `~/.codex/auth.json`, `~/.codex/config.toml` |
-| OpenCode | OpenAI-compatible provider, default model, small model | `~/.config/opencode/opencode.json` |
-| Oh My OpenAgent | agents/categories model routing, with synced OpenCode provider config | `~/.config/opencode/oh-my-openagent.json` |
-| OpenClaw | provider and default agent model | `~/.openclaw/openclaw.json` |
-| Hermes Agent | custom provider and default model | `~/.hermes/config.yaml` |
-| Pi | custom provider, default provider, and default model | `~/.pi/agent/models.json`, `~/.pi/agent/settings.json` |
-| Oh My Pi | provider and agent/category model routing | `~/.omp/agent/models.yml` |
 
 ## Screenshots
 
@@ -166,7 +160,7 @@ When no Claude Desktop target is available on the system, Switch++ skips desktop
 
 ## Search Keywords
 
-Switch++, Switch Plus Plus, switchpp, switch-plus-plus, cc3p, Claude Code third-party models, Claude Code config switching, Claude Code gateway, Claude Desktop third-party models, Codex third-party models, Codex CLI, Codex Desktop, Codex config switching, Codex local gateway, Agent Router, model router, model switcher, LLM gateway, Hermes, OpenCode, OpenClaw, Pi, DeepSeek Codex, Kimi Codex, MiniMax Claude Code, GLM Codex, OpenAI-compatible, Anthropic-compatible, local compatibility gateway.
+Switch++, Switch Plus Plus, switchpp, switch-plus-plus, cc3p, Claude Code third-party models, Claude Code config switching, Claude Code gateway, Claude Desktop third-party models, Codex third-party models, Codex CLI, Codex Desktop, Codex config switching, Codex local gateway, Agent Router, model router, model switcher, LLM gateway, DeepSeek Codex, Kimi Codex, MiniMax Claude Code, GLM Codex, OpenAI-compatible, Anthropic-compatible, local compatibility gateway.
 
 ## Copyright and License
 

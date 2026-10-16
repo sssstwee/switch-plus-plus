@@ -6,13 +6,6 @@ import {
   buildCodexModelCatalogPreview,
   buildGatewayModels,
   buildGatewayConfigPreview,
-  buildGrokBuildConfigPreview,
-  buildHermesConfigPreview,
-  buildOhMyOpenCodeConfigPreview,
-  buildOhMyPiConfigPreview,
-  buildOpenCodeConfigPreview,
-  buildOpenClawConfigPreview,
-  buildPiConfigPreview,
 } from "./configPreviews.ts";
 import { defaultCodexConfigOptions } from "./codexConfig.ts";
 import { defaultModelMap } from "./gatewayProfile.ts";
@@ -243,15 +236,15 @@ includes(
     display_name: "DeepSeek",
     compat_mode: "direct",
     base_url: "https://api.deepseek.com",
-    model: "deepseek-v4-flash",
-    model_map: defaultModelMap("deepseek-v4-flash"),
-    provider_model_map: defaultModelMap("deepseek-v4-flash"),
-    models: ["deepseek-v4-flash", "deepseek-v4-pro"],
+    model: "deepseek-flash",
+    model_map: defaultModelMap("deepseek-flash"),
+    provider_model_map: defaultModelMap("deepseek-flash"),
+    models: ["deepseek-flash", "deepseek-v4-pro"],
     codex_config_options: { ...defaultCodexConfigOptions, high_reasoning: true },
   };
   const deepseekConfig = buildCodexConfigTomlTemplate(deepseekForm, deepseekPreset);
-  includes(deepseekConfig, 'model = "deepseek-v4-flash"');
-  includes(deepseekConfig, 'preferred_auth_method = "apikey"');
+  includes(deepseekConfig, 'model = "deepseek-flash"');
+  excludes(deepseekConfig, 'preferred_auth_method');
   includes(deepseekConfig, 'forced_login_method = "api"');
   includes(deepseekConfig, 'model_reasoning_effort = "high"');
   includes(deepseekConfig, 'base_url = "https://api.deepseek.com"');
@@ -263,9 +256,9 @@ includes(
     display_name: "DeepSeek",
     compat_mode: "direct",
     base_url: "https://api.deepseek.com",
-    model: "deepseek-v4-flash",
-    model_map: defaultModelMap("deepseek-v4-flash"),
-    provider_model_map: defaultModelMap("deepseek-v4-flash"),
+    model: "deepseek-flash",
+    model_map: defaultModelMap("deepseek-flash"),
+    provider_model_map: defaultModelMap("deepseek-flash"),
   }));
   const [flash] = deepseekCatalog.models as Array<{
     display_name: string;
@@ -277,7 +270,7 @@ includes(
     web_search_tool_type: string;
     minimal_client_version: string;
   }>;
-  equal(flash?.display_name, "deepseek-v4-flash");
+  equal(flash?.display_name, "deepseek-flash");
   equal(flash?.context_window, 1_048_576);
   equal(flash?.truncation_policy.limit, 10_000);
   equal(flash?.default_reasoning_level, "high");
@@ -292,12 +285,12 @@ includes(
     display_name: "DeepSeek",
     compat_mode: "direct",
     base_url: "https://api.deepseek.com",
-    model: "deepseek-v4-flash",
-    model_map: defaultModelMap("deepseek-v4-flash"),
-    provider_model_map: defaultModelMap("deepseek-v4-flash"),
+    model: "deepseek-flash",
+    model_map: defaultModelMap("deepseek-flash"),
+    provider_model_map: defaultModelMap("deepseek-flash"),
   }, ["deepseek-v4-pro"]));
   const displayNames = (deepseekCatalog.models as Array<{ display_name: string }>).map((model) => model.display_name);
-  equal(displayNames.join(","), "deepseek-v4-flash,deepseek-v4-pro");
+  equal(displayNames.join(","), "deepseek-flash,deepseek-v4-pro");
 }
 {
   const directCatalog = JSON.parse(buildCodexModelCatalogPreview({ ...baseCodexForm, compat_mode: "direct" }));
@@ -560,151 +553,32 @@ if (/inferenceGateway(BaseUrl|ApiKey|AuthField|ApiFormat)/.test(officialPackageD
   throw new Error("Claude Desktop official package preview must stay isolated from gateway/API fields");
 }
 
-const hermesPreview = buildHermesConfigPreview({
-  ...baseCodexForm,
-  display_name: "阿里百炼",
-  api_format: "openai_chat",
-  auth_field: "OPENAI_API_KEY",
-  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-  model: "qwen3.7-max",
-  model_map: {
-    ...defaultModelMap("qwen3.7-max"),
-    sonnet: "qwen-plus",
-  },
-  models: ["qwen3.7-max", "qwen3.6-plus", "qwen3.6-flash"],
-});
-
-includes(hermesPreview, 'base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"');
-includes(hermesPreview, 'api_mode: "chat_completions"');
-includes(hermesPreview, 'provider: "switch++"');
-includes(hermesPreview, '- name: "switch++"');
-includes(hermesPreview, 'model: "qwen3.7-max"');
-includes(hermesPreview, '      "qwen3.6-plus":\n        context_length: 262144');
-includes(hermesPreview, '      "qwen3.6-flash":\n        context_length: 262144');
-if (hermesPreview.includes('      "qwen-plus":\n        context_length: 262144')) {
-  throw new Error("Hermes title generation model should not be forced into custom_providers.models");
+// Current native providers must expose their real image and reasoning capabilities.
+for (const [presetId, model, expectedContext, images] of [
+  ["deepseek", "deepseek-flash", 1_048_576, true],
+  ["deepseek", "deepseek-v4-pro", 1_048_576, false],
+  ["minimax-coding-cn", "MiniMax-M3.1-Flash-Preview", 524_288, true],
+  ["openai", "gpt-6.1-sol", 272_000, true],
+] as const) {
+  const preset = allVendorPresets.find((item) => item.id === presetId)!;
+  const form: AddForm = {
+    ...baseCodexForm,
+    base_url: preset.base_url,
+    compat_mode: "direct",
+    api_format: "openai_responses",
+    model,
+    models: [model],
+  };
+  const entry = JSON.parse(buildCodexModelCatalogPreview(form)).models[0];
+  equal(entry.context_window, expectedContext);
+  equal(entry.input_modalities.includes("image"), images);
+  equal(entry.supported_reasoning_levels.some((level: { effort: string }) => level.effort === "max"), true);
+  const config = buildCodexConfigTomlTemplate(form, preset);
+  excludes(config, "preferred_auth_method");
+  excludes(config, "model_supports_reasoning_summaries");
+  if (presetId.startsWith("minimax")) {
+    equal(entry.supports_reasoning_summaries, true);
+    includes(config, 'forced_login_method = "api"');
+    includes(config, 'wire_api = "responses"');
+  }
 }
-includes(hermesPreview, 'auxiliary:\n  title_generation:\n    provider: "switch++"\n    model: "qwen-plus"');
-
-const minimaxHermesPreview = buildHermesConfigPreview({
-  ...baseCodexForm,
-  display_name: "MiniMax",
-  api_format: "anthropic",
-  auth_field: "ANTHROPIC_API_KEY",
-  base_url: "https://api.minimax.io/anthropic",
-  model: "MiniMax-M2.7",
-  model_map: defaultModelMap("MiniMax-M2.7"),
-});
-
-includes(minimaxHermesPreview, 'base_url: "https://api.minimax.io/anthropic"');
-includes(minimaxHermesPreview, 'api_mode: "anthropic_messages"');
-includes(minimaxHermesPreview, 'model: "MiniMax-M2.7"');
-
-const grokBuildResponsesPreview = buildGrokBuildConfigPreview({
-  ...baseCodexForm,
-  api_format: "openai_responses",
-  models: ["qwen3.6-plus", "qwen3.6-flash"],
-});
-includes(grokBuildResponsesPreview, "[models]");
-includes(grokBuildResponsesPreview, 'default = "switchpp"');
-includes(grokBuildResponsesPreview, "[model.switchpp]");
-includes(grokBuildResponsesPreview, 'api_backend = "responses"');
-includes(grokBuildResponsesPreview, 'api_key = "sk-test"');
-includes(grokBuildResponsesPreview, "[model.switchpp-2]");
-
-const grokBuildAnthropicPreview = buildGrokBuildConfigPreview({
-  ...baseCodexForm,
-  api_format: "anthropic",
-  base_url: "https://api.anthropic.com/v1",
-});
-includes(grokBuildAnthropicPreview, 'api_backend = "messages"');
-includes(grokBuildAnthropicPreview, 'extra_headers = { "x-api-key" = "sk-test", "anthropic-version" = "2023-06-01" }');
-excludes(grokBuildAnthropicPreview, 'api_key = "sk-test"');
-
-const googleHermesPreview = buildHermesConfigPreview({
-  ...baseCodexForm,
-  display_name: "Google AI",
-  api_format: "gemini",
-  auth_field: "GEMINI_API_KEY",
-  base_url: "https://generativelanguage.googleapis.com/v1beta",
-  model: "gemini-2.5-pro",
-  model_map: defaultModelMap("gemini-2.5-pro"),
-});
-
-includes(googleHermesPreview, 'provider: "gemini"');
-includes(googleHermesPreview, 'base_url: "https://generativelanguage.googleapis.com/v1beta"');
-includes(googleHermesPreview, 'title_generation:\n    provider: "gemini"\n    model: "gemini-2.5-pro"');
-if (googleHermesPreview.includes("custom_providers:")) {
-  throw new Error("Gemini Hermes preview should use Hermes native gemini provider, not custom_providers");
-}
-
-const openCodePreview = buildOpenCodeConfigPreview({
-  ...baseCodexForm,
-  display_name: "阿里百炼套餐",
-  api_format: "anthropic",
-  auth_field: "ANTHROPIC_AUTH_TOKEN",
-  base_url: "https://coding.dashscope.aliyuncs.com/apps/anthropic/v1",
-  model: "qwen3.6-plus",
-  model_map: {
-    main: "qwen3.6-plus",
-    haiku: "qwen3.6-flash",
-    sonnet: "claude-sonnet-legacy",
-    opus: "claude-opus-legacy",
-  },
-  models: ["qwen3.6-plus", "qwen3-coder-plus"],
-});
-
-includes(openCodePreview, '"npm": "@ai-sdk/anthropic"');
-includes(openCodePreview, '"baseURL": "https://coding.dashscope.aliyuncs.com/apps/anthropic/v1"');
-includes(openCodePreview, '"small_model": "agent-switch-provider/qwen3.6-flash"');
-includes(openCodePreview, '"qwen3-coder-plus"');
-excludes(openCodePreview, "claude-sonnet-legacy");
-excludes(openCodePreview, "claude-opus-legacy");
-
-const ohMyOpenAgentPreview = buildOhMyOpenCodeConfigPreview({
-  ...baseCodexForm,
-  model: "qwen3.6-plus",
-  model_map: {
-    main: "qwen3.6-plus",
-    haiku: "qwen3.6-flash",
-    sonnet: "claude-sonnet-legacy",
-    opus: "claude-opus-legacy",
-  },
-  models: ["qwen3.6-plus", "qwen3-coder-plus"],
-});
-includes(ohMyOpenAgentPreview, '"sisyphus": {\n      "model": "agent-switch-provider/qwen3.6-plus"');
-excludes(ohMyOpenAgentPreview, "claude-sonnet-legacy");
-excludes(ohMyOpenAgentPreview, "claude-opus-legacy");
-
-const appModelForm = {
-  ...baseCodexForm,
-  model: "qwen3.7-max",
-  model_map: {
-    main: "qwen3.7-max",
-    haiku: "claude-haiku-legacy",
-    sonnet: "claude-sonnet-legacy",
-    opus: "claude-opus-legacy",
-  },
-  models: ["qwen3.7-max", "qwen-plus"],
-};
-
-const openClawPreview = buildOpenClawConfigPreview(appModelForm);
-includes(openClawPreview, '"primary": "agent-switch-provider/qwen3.7-max"');
-includes(openClawPreview, '"id": "qwen-plus"');
-excludes(openClawPreview, "claude-haiku-legacy");
-excludes(openClawPreview, "claude-sonnet-legacy");
-excludes(openClawPreview, "claude-opus-legacy");
-
-const piPreview = buildPiConfigPreview(appModelForm);
-includes(piPreview, '"defaultModel": "qwen3.7-max"');
-includes(piPreview, '"id": "qwen-plus"');
-excludes(piPreview, "claude-haiku-legacy");
-excludes(piPreview, "claude-sonnet-legacy");
-excludes(piPreview, "claude-opus-legacy");
-
-const ohMyPiPreview = buildOhMyPiConfigPreview(appModelForm);
-includes(ohMyPiPreview, 'model: "agent-switch-provider/qwen3.7-max"');
-includes(ohMyPiPreview, 'id: "qwen-plus"');
-excludes(ohMyPiPreview, "claude-haiku-legacy");
-excludes(ohMyPiPreview, "claude-sonnet-legacy");
-excludes(ohMyPiPreview, "claude-opus-legacy");

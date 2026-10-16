@@ -167,22 +167,22 @@ function gatewayCapabilityLimitation(target: TargetKey, profile: CodexProfile | 
       return "仍有限制：Codex 官方账号或 OpenAI Responses 路径按官方能力工作；Switch++ 不介入模型能力，也不会改变 Codex 自身的图片、文件或工具支持边界。";
     }
     if (kind === "deepseek") {
-      return "仍有限制：DeepSeek 官方 Responses API 当前仅支持 deepseek-v4-flash；图片/文件输入、previous_response_id 和服务端会话状态暂不支持。";
+      return "仍有限制：DeepSeek 原生 Responses 支持 deepseek-flash 与 deepseek-v4-pro；Flash 支持图片，Pro 为纯文本；previous_response_id 和服务端会话状态不受支持。";
     }
     if (kind === "minimax") {
-      return "仍有限制：MiniMax M3 原生支持图片和视频，但 Codex 经本地网关接入时仍受 Codex 请求格式、内容块映射、模型大小和计费限制。";
+      return "仍有限制：MiniMax 已支持 Codex 原生 Responses；M3.1 Flash Preview 目前仅向 M Plan 等指定入口开放，使用官方推荐的 512K 上下文，不能关闭思考。";
     }
     if (kind === "zai") {
-      return "仍有限制：Z.ai/智谱 Codex 路径依赖本地网关适配到 Chat Completions；GLM-5.2 文档主打编码和代理任务，视觉能力需 Vision MCP 或视觉模型，不由本地网关补齐。";
+      return "仍有限制：曾订阅 Coding Plan 的智谱/Z.ai 账号目前仍受 Chat 协议限制，Codex 使用本地网关；GLM-5.3 为纯文本，GLM-5.3-Flash 支持多模态，两者均不能关闭思考。";
     }
     if (kind === "kimi-code") {
-      return "仍有限制：Kimi Code 路径提供 K3 / K2.7 Code；图片和视频能力仍取决于所选模型、请求格式和套餐权限。";
+      return "仍有限制：Kimi Code 使用 k3、k3-256k、kimi-for-coding 或 kimi-for-coding-highspeed；kimi-for-coding 已升级至 K2.8 Preview，不能直接填写产品版本名。";
     }
     if (kind === "kimi") {
-      return "仍有限制：Kimi K2.6 官方文档说明最新模型支持图片和视频输入；Codex 经本地网关适配时仍受 Codex 请求格式、内容块映射、模型大小和计费限制。";
+      return "仍有限制：Kimi API 使用 kimi-k3 / kimi-k2.7-code 等平台模型 ID，与 Kimi Code 的 k3 等套餐 ID 不同；多模态能力仍取决于模型、请求格式和账号权限。";
     }
     if (kind === "bailian") {
-      return "仍有限制：阿里百炼 Codex 按量路径支持 Responses；图片/视频能力仍取决于是否选择千问 VL 等多模态模型，默认文本或代码模型不会因为本地网关获得视觉能力。";
+      return "仍有限制：阿里百炼按量 API 支持 Responses；Qwen3.8 等模型的多模态能力与 Coding Plan 的精确模型清单应分别按官方说明确认。";
     }
     if (kind === "siliconflow") {
       return "仍有限制：硅基流动 Codex 路径经本地网关连接上游；只有 VLM 模型处理图片，当前 GLM-5.2 等文本模型仍按文本模型工作。";
@@ -202,23 +202,23 @@ function gatewayCapabilityLimitation(target: TargetKey, profile: CodexProfile | 
   if (target === "claude_cli" || target === "claude_desktop") {
     if (kind === "deepseek") {
       return target === "claude_desktop"
-        ? "仍有限制：DeepSeek V4 官方 API 是纯文本模型；Claude Desktop 可在本地网关中选择另一个视觉 profile 先生成图片描述，再交给 DeepSeek。未配置视觉代理时，image、document、search_result 内容块仍不受支持。"
-        : "仍有限制：DeepSeek V4 官方 API 是纯文本模型；Claude Code 的 image、document、search_result 内容块仍不受支持，图片需改用视觉模型或视觉 MCP。";
+        ? "仍有限制：DeepSeek-Flash（V4.1）支持原生图片；V4-Pro 为纯文本，可在 Claude Desktop 中选择视觉代理生成图片描述；文件与工具内容仍受厂商协议限制。"
+        : "仍有限制：DeepSeek-Flash（V4.1）支持原生图片；V4-Pro 为纯文本，图片需改用 Flash 或视觉代理；文件与工具内容仍受厂商协议限制。";
     }
     if (kind === "minimax") {
       return "仍有限制：MiniMax M3 原生支持图片和视频，但能力仍取决于 Claude 请求内容和 MiniMax 兼容端点；本地网关不能绕过格式、大小和计费限制。";
     }
     if (kind === "zai") {
-      return "仍有限制：Z.ai/智谱 Claude Code 文档将 GLM-5.2 定位为编码模型，并把视觉能力放在 Vision MCP；本地网关可降低模型映射和配置问题，但不能替代视觉 MCP 或让非视觉模型读取图片。";
+      return "仍有限制：GLM-5.3 为纯文本，GLM-5.3-Flash 支持图片和视频；GLM-5.3 系列始终开启思考，具体模态与额度取决于模型和账号权限。";
     }
     if (kind === "kimi-code") {
-      return "仍有限制：Kimi Code 路径提供 K3 / K2.7 Code；图片和视频能力仍取决于所选模型、请求格式和套餐权限。";
+      return "仍有限制：Kimi Code 的 k3 与 kimi-for-coding 等套餐 ID 不同于平台 API 型号；kimi-for-coding 已升级至 K2.8 Preview，能力仍取决于所选模型和套餐权限。";
     }
     if (kind === "kimi") {
-      return "仍有限制：Kimi K2.6 文档说明最新模型支持图片和视频输入，但能力依赖 Kimi API 的多模态请求格式；本地网关只能保留/转发兼容内容块，不能绕过模型格式、大小和计费限制。";
+      return "仍有限制：Kimi K3 支持原生视觉和 1M 上下文；图片和视频能力仍取决于模型、兼容端点、请求格式和账号权限。";
     }
     if (kind === "bailian") {
-      return "仍有限制：阿里百炼 Anthropic 兼容接口列出千问 VL 模型和多模态示例；图片/视频能力取决于所选上游模型，非 VL 文本或代码模型不会因为开启本地网关而获得视觉能力。";
+      return "仍有限制：阿里百炼图片/视频能力取决于模型与兼容端点；按量 API、Coding Plan 和 Token Plan 的模型清单与密钥不能混用。";
     }
     if (kind === "siliconflow") {
       return "仍有限制：硅基流动文档说明只有 VLM 模型可处理图片；当前预设的 GLM-5.2 等文本模型仍按文本模型处理，本地网关不会自动切换到视觉模型。";

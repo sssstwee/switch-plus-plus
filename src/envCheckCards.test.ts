@@ -8,18 +8,6 @@ function readSource(path: string) {
 
 const cards = buildEnvCheckCards(null, "macos");
 
-const piCard = cards.find((card) => card.key === "pi");
-equal(piCard?.launchCommand, "pi");
-deepEqual(piCard?.launchArgs, []);
-
-const ohMyPiCard = cards.find((card) => card.key === "oh_my_pi");
-equal(ohMyPiCard?.launchCommand, "omp");
-deepEqual(ohMyPiCard?.launchArgs, []);
-
-const ohMyOpenAgentCard = cards.find((card) => card.key === "oh_my_opencode");
-equal(ohMyOpenAgentCard?.launchCommand, "opencode");
-deepEqual(ohMyOpenAgentCard?.launchArgs, []);
-
 const codexDesktopCard = cards.find((card) => card.key === "codex_desktop");
 equal(codexDesktopCard?.title, "ChatGPT（Codex）");
 equal(codexDesktopCard?.launchCommand, "open");
@@ -27,9 +15,8 @@ deepEqual(codexDesktopCard?.launchArgs, ["-b", "com.openai.codex"]);
 
 const appSource = readSource("./App.tsx");
 const envCheckCardsSource = readSource("./features/env-check/envCheckCards.ts");
-equal(envCheckCardsSource.includes("请先安装 OpenCode"), true);
 equal(envCheckCardsSource.includes("Codex 桌面功能已集成在 ChatGPT 中"), true);
-equal(envCheckCardsSource.includes("它是独立增强版 CLI"), true);
+deepEqual(cards.map((card) => card.key), ["claude_cli", "claude_desktop", "codex_cli", "codex_desktop"]);
 equal(appSource.includes("启动命令"), true);
 equal(appSource.includes("启动参数"), true);
 equal(appSource.includes("launchCommandDisplay(item)"), true);

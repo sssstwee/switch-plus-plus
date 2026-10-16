@@ -38,6 +38,7 @@ const officialCodexModels = filterProviderModelCandidates(
     "gpt-6-luna",
     "gpt-5.3-codex-spark",
     "gpt-6-sol",
+    "gpt-6.1-sol",
     "gpt-6-astra",
     "gpt-5.6-luna",
     "gpt-5.4-mini",
@@ -50,7 +51,7 @@ const officialCodexModels = filterProviderModelCandidates(
 );
 equal(
   officialCodexModels.join(","),
-  "gpt-6-astra,gpt-6-sol,gpt-6-luna",
+  "gpt-6-astra,gpt-6.1-sol,gpt-6-sol,gpt-6-luna",
 );
 excludes(officialCodexModels, "gpt-5.6-sol");
 equal(filterProviderModelCandidates(["gpt-5.5"], openaiPackage).length, 0);
@@ -130,3 +131,15 @@ excludes(bailianModels, "qwen3.5-livetranslate-flash-realtime-2026-05-19");
 excludes(bailianModels, "wan2.7-image-pro");
 excludes(bailianModels, "qvq-max-2025-05-15");
 excludes(bailianModels, "z-image-turbo");
+
+// A server-advertised minor release must survive even if bundled presets predate it.
+const liveOpenAiModels = filterProviderModelCandidates(
+  ["gpt-6.2-sol", "gpt-6.1-sol", "gpt-5.5", "gpt-image-2", "gpt-6.2-sol-audio-preview"],
+  openaiApi,
+);
+includes(liveOpenAiModels, "gpt-6.2-sol");
+includes(liveOpenAiModels, "gpt-6.1-sol");
+excludes(liveOpenAiModels, "gpt-5.5");
+excludes(liveOpenAiModels, "gpt-image-2");
+excludes(liveOpenAiModels, "gpt-6.2-sol-audio-preview");
+excludes(filterProviderModelCandidates(["openai/gpt-6.1-sol:batch", "openai/gpt-6.1-sol"], openrouter), "openai/gpt-6.1-sol:batch");

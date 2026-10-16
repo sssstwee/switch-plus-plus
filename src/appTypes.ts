@@ -1,16 +1,6 @@
 import type { CodexConfigOptions } from "./codexConfig.ts";
 
-export type GatewayTargetKey =
-  | "claude_cli"
-  | "claude_desktop"
-  | "grok_build"
-  | "antigravity"
-  | "opencode"
-  | "oh_my_opencode"
-  | "openclaw"
-  | "hermes"
-  | "pi"
-  | "oh_my_pi";
+export type GatewayTargetKey = "claude_cli" | "claude_desktop";
 export type CodexTargetKey = "codex";
 export type LegacyTargetKey = "codex_cli" | "codex_desktop";
 export type TargetKey = GatewayTargetKey | CodexTargetKey;
@@ -73,18 +63,6 @@ export type GatewayConfigOptions = {
   disable_telemetry: boolean;
   disable_nonessential_traffic: boolean;
   disable_auto_update: boolean;
-  opencode_disable_share: boolean;
-  opencode_require_approval: boolean;
-  opencode_disable_autoupdate: boolean;
-  opencode_provider_allowlist: boolean;
-  openclaw_model_allowlist: boolean;
-  openclaw_disable_channel_health: boolean;
-  openclaw_handshake_timeout_long: boolean;
-  openclaw_sandbox_non_main: boolean;
-  hermes_worktree: boolean;
-  hermes_streaming: boolean;
-  hermes_smart_approvals: boolean;
-  hermes_disable_memory: boolean;
   write_general_config: boolean;
 };
 
@@ -135,14 +113,6 @@ export type CodexProfile = {
 export type AppState = {
   claude_cli: GatewayProfile[];
   claude_desktop: GatewayProfile[];
-  grok_build: GatewayProfile[];
-  antigravity: GatewayProfile[];
-  opencode: GatewayProfile[];
-  oh_my_opencode: GatewayProfile[];
-  openclaw: GatewayProfile[];
-  hermes: GatewayProfile[];
-  pi: GatewayProfile[];
-  oh_my_pi: GatewayProfile[];
   codex: CodexProfile[];
   codex_cli?: CodexProfile[];
   codex_desktop?: CodexProfile[];
@@ -167,77 +137,6 @@ export type LicenseActivationStatus = {
 
 export type LicenseActivationResult = LicenseActivationStatus & {
   message: string;
-};
-
-export type CodexMemorySettings = {
-  memoriesFeatureEnabled: boolean;
-  generateMemories: boolean;
-  useMemories: boolean;
-  disableOnExternalContext: boolean;
-  minRateLimitRemainingPercent: number | null;
-  extractModel: string;
-  consolidationModel: string;
-};
-
-export type CodexMemoryFile = {
-  path: string;
-  label: string;
-  kind: string;
-  sizeBytes: number;
-  modifiedAt: number;
-  preview: string;
-  generated: boolean;
-};
-
-export type CodexMemoryProjectGroup = {
-  projectPath: string;
-  title: string;
-  isCurrent: boolean;
-  entryCount: number;
-  latestModifiedAt: number;
-  summaryPreview: string;
-  files: CodexMemoryFile[];
-};
-
-export type CodexMemoryInstructionSource = {
-  scope: string;
-  sourceType: string;
-  label: string;
-  path: string;
-  exists: boolean;
-  modifiedAt: number;
-  preview: string;
-};
-
-export type CodexMemoryCorrectionNote = {
-  id: string;
-  path: string;
-  projectPath: string;
-  relatedFile: string;
-  incorrectMemory: string;
-  correctedMemory: string;
-  createdAt: number;
-  preview: string;
-};
-
-export type CodexMemoryCorrectionRequest = {
-  incorrectMemory: string;
-  correctedMemory: string;
-  projectPath: string;
-  relatedFile: string;
-};
-
-export type CodexMemoryOverview = {
-  codexHome: string;
-  currentProjectPath: string;
-  settings: CodexMemorySettings;
-  memoryFiles: CodexMemoryFile[];
-  projectGroups: CodexMemoryProjectGroup[];
-  instructionSources: CodexMemoryInstructionSource[];
-  correctionNotes: CodexMemoryCorrectionNote[];
-  totalFileCount: number;
-  totalProjectCount: number;
-  latestModifiedAt: number;
 };
 
 export type CodexProxyStatus = {

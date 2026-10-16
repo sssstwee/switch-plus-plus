@@ -55,18 +55,6 @@ export const defaultGatewayConfigOptions: GatewayConfigOptions = {
   disable_telemetry: false,
   disable_nonessential_traffic: false,
   disable_auto_update: false,
-  opencode_disable_share: false,
-  opencode_require_approval: false,
-  opencode_disable_autoupdate: false,
-  opencode_provider_allowlist: false,
-  openclaw_model_allowlist: true,
-  openclaw_disable_channel_health: false,
-  openclaw_handshake_timeout_long: false,
-  openclaw_sandbox_non_main: false,
-  hermes_worktree: false,
-  hermes_streaming: false,
-  hermes_smart_approvals: false,
-  hermes_disable_memory: false,
   write_general_config: true,
 };
 
@@ -371,13 +359,7 @@ export type ConfigOptionSupport = {
 };
 
 function targetLabel(target: TargetKey) {
-  if (target === "opencode") return "OpenCode";
-  if (target === "oh_my_opencode") return "Oh My OpenAgent";
-  if (target === "openclaw") return "OpenClaw";
-  if (target === "hermes") return "Hermes Agent";
-  if (target === "grok_build") return "Grok Build";
-  if (target === "pi") return "Pi Coding Agent";
-  if (target === "oh_my_pi") return "Oh My Pi";
+
   if (target === "claude_desktop") return "Claude Desktop";
   if (target === "claude_cli") return "Claude Code";
   if (target === "codex") return "Codex";
@@ -394,7 +376,7 @@ function apiFormatLabel(format: string) {
 }
 
 export const sourceReferences: Record<
-  "claudeCode" | "anthropic" | "openrouter" | "minimax" | "deepseek" | "zai" | "kimi" | "bailian" | "gateway" | "opencode" | "openclaw" | "hermes" | "antigravity" | "unknown",
+  "claudeCode" | "anthropic" | "openrouter" | "minimax" | "deepseek" | "zai" | "kimi" | "bailian" | "gateway" |     "unknown",
   ConfigSourceReference
 > = {
   claudeCode: {
@@ -433,142 +415,10 @@ export const sourceReferences: Record<
     label: "Anthropic Claude Code 官方模型配置文档",
     url: "https://docs.anthropic.com/en/docs/claude-code/model-config",
   },
-  opencode: {
-    label: "OpenCode 官方 JSON 配置文档",
-    url: "https://dev.opencode.ai/docs/config/",
-  },
-  openclaw: {
-    label: "OpenClaw 官方 Gateway 配置文档",
-    url: "https://github.com/openclaw/openclaw/blob/main/docs/gateway/configuration.md",
-  },
-  hermes: {
-    label: "Hermes Agent 官方配置文档",
-    url: "https://hermes-agent.nousresearch.com/docs/user-guide/configuration/",
-  },
-  antigravity: {
-    label: "Antigravity 官方文档暂未公开稳定第三方模型写入字段",
-  },
   unknown: {
     label: "未找到该预设厂商公开说明支持此 Claude Code 高级项",
   },
 };
-
-const opencodeConfigOptionItems: Array<(typeof gatewayConfigOptionItems)[number]> = [
-  {
-    key: "opencode_disable_share",
-    label: "禁用分享",
-    description: "写入 share=\"disabled\"，按 OpenCode 配置文档关闭分享能力。",
-    configFields: ["share"],
-    source: sourceReferences.opencode,
-    supportDetail: "OpenCode 官方配置提供 share 字段；这里仅在勾选时写入 disabled。",
-    recommended: false,
-  },
-  {
-    key: "opencode_require_approval",
-    label: "工具操作需确认",
-    description: "写入 permission.edit / permission.bash = ask，让文件编辑和命令执行走确认流程。",
-    configFields: ["permission.edit", "permission.bash"],
-    source: sourceReferences.opencode,
-    supportDetail: "OpenCode 官方配置提供 permission 字段，可控制工具权限策略。",
-    recommended: true,
-  },
-  {
-    key: "opencode_disable_autoupdate",
-    label: "禁用自动升级",
-    description: "写入 autoupdate=false，避免 OpenCode 自动升级影响当前配置。",
-    configFields: ["autoupdate"],
-    source: sourceReferences.opencode,
-    supportDetail: "OpenCode 官方配置示例和 schema 提供 autoupdate 字段。",
-    recommended: false,
-  },
-  {
-    key: "opencode_provider_allowlist",
-    label: "仅启用当前 Provider",
-    description: "写入 enabled_providers=[当前 provider]，限制模型列表只加载 Switch++ 当前写入的 provider。",
-    configFields: ["enabled_providers"],
-    source: sourceReferences.opencode,
-    supportDetail: "OpenCode 官方配置提供 enabled_providers allowlist；启用后其他 provider 不会被加载。",
-    recommended: false,
-  },
-];
-
-const openclawConfigOptionItems: Array<(typeof gatewayConfigOptionItems)[number]> = [
-  {
-    key: "openclaw_model_allowlist",
-    label: "写入默认模型白名单",
-    description: "写入 agents.defaults.models，确保默认 agent 允许使用当前 provider/model。",
-    configFields: ["agents.defaults.models"],
-    source: sourceReferences.openclaw,
-    supportDetail: "OpenClaw Gateway 配置以 agents.defaults.model.primary 指定主模型，并可在 defaults.models 中配置可用模型。",
-    recommended: true,
-  },
-  {
-    key: "openclaw_disable_channel_health",
-    label: "关闭通道健康检查",
-    description: "写入 gateway.channelHealthCheckMinutes=0，适合只做本地模型切换、不需要通道健康轮询的场景。",
-    configFields: ["gateway.channelHealthCheckMinutes"],
-    source: sourceReferences.openclaw,
-    supportDetail: "OpenClaw Gateway 配置包含 gateway 分区，健康检查属于 Gateway 行为配置。",
-    recommended: false,
-  },
-  {
-    key: "openclaw_handshake_timeout_long",
-    label: "延长握手超时",
-    description: "写入 gateway.handshakeTimeoutMs=30000，提高慢代理或远端节点握手容忍度。",
-    configFields: ["gateway.handshakeTimeoutMs"],
-    source: sourceReferences.openclaw,
-    supportDetail: "OpenClaw Gateway 配置提供 Gateway 连接行为字段，适合网络较慢时调整。",
-    recommended: false,
-  },
-  {
-    key: "openclaw_sandbox_non_main",
-    label: "非主会话沙箱",
-    description: "写入 agents.defaults.sandbox.mode=\"non-main\" 与 scope=\"agent\"，让非主 agent 默认进入沙箱。",
-    configFields: ["agents.defaults.sandbox.mode", "agents.defaults.sandbox.scope"],
-    source: sourceReferences.openclaw,
-    supportDetail: "OpenClaw Gateway 配置文档给出 agents.defaults.sandbox 的 mode/scope 示例。",
-    recommended: false,
-  },
-];
-
-const hermesConfigOptionItems: Array<(typeof gatewayConfigOptionItems)[number]> = [
-  {
-    key: "hermes_worktree",
-    label: "启用工作树隔离",
-    description: "写入 worktree=true，让 Hermes 为任务使用隔离工作树。",
-    configFields: ["worktree"],
-    source: sourceReferences.hermes,
-    supportDetail: "Hermes 配置集中在 ~/.hermes/config.yaml，任务运行和工作区行为由 config.yaml 管理。",
-    recommended: false,
-  },
-  {
-    key: "hermes_streaming",
-    label: "启用 CLI 流式输出",
-    description: "写入 display.streaming=true，按 Hermes 文档在 CLI 中实时显示 token。",
-    configFields: ["display.streaming"],
-    source: sourceReferences.hermes,
-    supportDetail: "Hermes 官方文档提供 display.streaming 作为 CLI 流式输出配置。",
-    recommended: false,
-  },
-  {
-    key: "hermes_smart_approvals",
-    label: "智能审批模式",
-    description: "写入 approvals.mode=smart，将命令审批交给 Hermes 的智能审批策略。",
-    configFields: ["approvals.mode"],
-    source: sourceReferences.hermes,
-    supportDetail: "Hermes 的 config.yaml 承载 approvals 等运行策略；勾选后只写入审批模式字段。",
-    recommended: false,
-  },
-  {
-    key: "hermes_disable_memory",
-    label: "关闭内置记忆",
-    description: "写入 memory.memory_enabled=false 与 memory.user_profile_enabled=false，关闭 Hermes 记忆加载。",
-    configFields: ["memory.memory_enabled", "memory.user_profile_enabled"],
-    source: sourceReferences.hermes,
-    supportDetail: "Hermes 官方目录结构包含 memories，并由 config.yaml 管理非密钥设置。",
-    recommended: false,
-  },
-];
 
 const documentedClaudeCodeGatewayPresets = new Set([
   "deepseek",
@@ -939,10 +789,7 @@ function isGatewayOnlyConfigOption(option: GatewayConfigOptionKey) {
 }
 
 export function configOptionItemsForTarget(target: TargetKey, isOfficialAnthropicDirect: boolean) {
-  if (target === "opencode") return opencodeConfigOptionItems;
-  if (target === "openclaw") return openclawConfigOptionItems;
-  if (target === "hermes") return hermesConfigOptionItems;
-  if (["grok_build", "antigravity", "oh_my_opencode", "pi", "oh_my_pi"].includes(target)) return [];
+
   if (target === "claude_desktop") {
     return gatewayConfigOptionItems.filter((option) => recommendedClaudeDesktopConfigOptionKeys.has(option.key));
   }

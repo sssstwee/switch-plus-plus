@@ -1,7 +1,6 @@
 import {
   ArrowsLeftRight as SubscriptionProxyIcon,
   ArrowCircleUp as UpdateAvailableIcon,
-  Brain as MemoryIcon,
   GearSix as SettingsIcon,
   Key as KeyIcon,
   ShieldCheck as ShieldCheckIcon,
@@ -121,14 +120,12 @@ type AppSidebarProps = {
   onEnvView: () => void;
   onGatewayView: () => void;
   onLicenseCodeChange: (value: string) => void;
-  onMemoryView: () => void;
   onSubscriptionProxyView: () => void;
   onLanguageChange: (language: AppLanguage) => void;
   onSettingsBackdropClick: () => void;
   onSettingsToggle: () => void;
   onTargetSelect: (target: TargetKey) => void;
   onUpdateClick: (event?: MouseEvent<HTMLElement>) => void;
-  onWindowDrag: (event: MouseEvent<HTMLElement>) => void;
   settingsButtonRef: RefObject<HTMLButtonElement | null>;
   settingsPopoverOpen: boolean;
   settingsPopoverStyle: CSSProperties;
@@ -148,14 +145,12 @@ export function AppSidebar({
   onEnvView,
   onGatewayView,
   onLicenseCodeChange,
-  onMemoryView,
   onSubscriptionProxyView,
   onLanguageChange,
   onSettingsBackdropClick,
   onSettingsToggle,
   onTargetSelect,
   onUpdateClick,
-  onWindowDrag,
   settingsButtonRef,
   settingsPopoverOpen,
   settingsPopoverStyle,
@@ -199,7 +194,6 @@ export function AppSidebar({
   return (
     <>
       <aside className="ccr-sidebar">
-        <div className="ccr-sidebar-window-strip" data-tauri-drag-region onMouseDown={onWindowDrag} />
 
         <div className="ccr-sidebar-brand">
           <strong>Switch++</strong>
@@ -309,22 +303,7 @@ export function AppSidebar({
               </span>
               <span className="ccr-target-btn-label">环境检查</span>
             </button>
-            <button
-              className={"ccr-target-btn" + (view === "memory" ? " active" : "")}
-              disabled={licenseMenuLocked}
-              onClick={() => {
-                if (licenseMenuLocked) return;
-                onMemoryView();
-              }}
-              aria-label="记忆整理"
-              title={licenseMenuLocked ? "试用已结束，请先激活。" : "记忆整理"}
-              type="button"
-            >
-              <span className="ccr-target-btn-icon ccr-target-logo-frame ccr-env-nav-icon">
-                <MemoryIcon className="h-4 w-4" />
-              </span>
-              <span className="ccr-target-btn-label">记忆整理</span>
-            </button>
+
             <button
               ref={settingsButtonRef}
               type="button"

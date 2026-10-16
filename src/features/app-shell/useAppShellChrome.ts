@@ -1,5 +1,3 @@
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import {
   checkOfficialAppUpdate,
@@ -78,16 +76,6 @@ export function useAppShellChrome({
   const appUpdateCheckingRef = useRef(false);
   const lastEventAppUpdateCheckAtRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    try {
-      void getCurrentWebviewWindow().setBackgroundColor([0, 0, 0, 0]).catch(() => {
-        // The Vite-only browser preview does not provide a Tauri window handle.
-      });
-    } catch {
-      // The Vite-only browser preview does not provide a Tauri window handle.
-    }
-  }, []);
-
   function toggleSettingsPopover() {
     const rect = settingsButtonRef.current?.getBoundingClientRect();
     if (rect) {
@@ -98,18 +86,6 @@ export function useAppShellChrome({
       setSettingsPopoverAnchor({ left, bottom });
     }
     setSettingsPopoverOpen((open) => !open);
-  }
-
-  function startWindowDrag(event: MouseEvent<HTMLElement>) {
-    if (event.button !== 0) return;
-    event.preventDefault();
-    try {
-      void getCurrentWindow().startDragging().catch(() => {
-        // The Vite-only browser preview does not provide a Tauri window handle.
-      });
-    } catch {
-      // The Vite-only browser preview does not provide a Tauri window handle.
-    }
   }
 
   async function runAppUpdateCheck(mode: AppUpdateCheckMode = "manual") {
@@ -237,7 +213,6 @@ export function useAppShellChrome({
     installAppUpdate,
     runAppUpdateCheck,
     settingsButtonRef,
-    startWindowDrag,
     toggleSettingsPopover,
   };
 }

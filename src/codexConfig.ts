@@ -203,6 +203,7 @@ const allCodexConfigOptionItems: CodexConfigOptionItem[] = [
 ];
 
 const hiddenCodexConfigOptionKeys = new Set<CodexConfigOptionKey>([
+  "force_reasoning_summaries",
   "disable_response_storage",
   "disable_history",
   "disable_update_check",
@@ -246,7 +247,6 @@ export function buildCodexConfigOptionTomlParts(options: CodexConfigOptions) {
 
   if (safeOptions.high_reasoning) topLevelLines.push('model_reasoning_effort = "high"');
   if (safeOptions.detailed_reasoning_summary) topLevelLines.push('model_reasoning_summary = "detailed"');
-  if (safeOptions.force_reasoning_summaries) topLevelLines.push("model_supports_reasoning_summaries = true");
   if (safeOptions.low_verbosity) topLevelLines.push('model_verbosity = "low"');
   if (safeOptions.show_raw_reasoning) topLevelLines.push("show_raw_agent_reasoning = true");
   if (safeOptions.enable_web_search) topLevelLines.push('web_search = "live"');
@@ -453,13 +453,29 @@ export function getCodexConfigOptionSupport(
     presetName?: string | null;
   },
 ): CodexConfigOptionSupport {
-  const isGpt6Model = /(^|[/:-])gpt-6-(astra|sol|luna)$/i.test(context.model);
+  const isGpt6Model = /(^|[/:-])gpt-6(?:\.\d+)*-(astra|sol|luna)$/i.test(context.model);
   const isGptReasoningModel = isGpt6Model || /(^|[/:-])gpt-5/i.test(context.model);
   const prefersModelDefaultReasoning = /(^|[/:-])gpt-6-astra$/i.test(context.model) || /(^|[/:-])gpt-5\.6-(sol|terra|luna)$/i.test(context.model);
   const usesNativeResponses = context.connectionMode === "official" || context.compatMode === "direct";
   const presetName = context.presetName || "当前厂商";
   const confirmedOpenAiResponses = context.connectionMode === "official" || context.presetId === "openai" || context.presetId === "openai-package";
   const isDeepSeekResponses = context.presetId === "deepseek" && context.compatMode === "direct";
+  const isMinimaxResponses = context.presetId?.startsWith("minimax")
+    && context.compatMode === "direct";
+
+  if (option.key === "high_reasoning" && isMinimaxResponses) {
+    return {
+      supported: true,
+      statusText: "按需勾选",
+      tone: "warn",
+      recommendation: "按需勾选：MiniMax 原生 Responses 支持 reasoning effort；M3.1 Flash Preview 默认使用 max。",
+      detail: '勾选会写入 model_reasoning_effort = "high"；不勾选时使用模型目录中的默认推理强度。',
+      source: {
+        label: "MiniMax 官方 Codex 配置",
+        url: "https://platform.minimax.io/docs/m-plan/codex",
+      },
+    };
+  }
 
   if (option.key === "high_reasoning" && isDeepSeekResponses) {
     return {
@@ -467,7 +483,7 @@ export function getCodexConfigOptionSupport(
       statusText: "建议勾选",
       tone: "ok",
       recommendation: "建议勾选：DeepSeek 官方 Codex 配置默认使用 high 推理强度。",
-      detail: '该项写入 model_reasoning_effort = "high"，与 DeepSeek V4-Flash 官方 Codex 示例一致。',
+      detail: '该项写入 model_reasoning_effort = "high"，与 DeepSeek Flash / V4-Pro 官方 Codex 示例一致。',
       source: {
         label: "DeepSeek 官方 Codex 集成文档",
         url: "https://api-docs.deepseek.com/quick_start/agent_integrations/codex",

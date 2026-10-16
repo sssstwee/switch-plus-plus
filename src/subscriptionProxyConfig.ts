@@ -15,10 +15,7 @@ export type SubscriptionProxyClientConfig = {
   model: string;
 };
 
-export type SubscriptionProxyTargetKey =
-  | "claude_cli"
-  | "claude_desktop"
-  | "grok_build";
+export type SubscriptionProxyTargetKey = "claude_cli" | "claude_desktop";
 
 export const SUBSCRIPTION_PROXY_PROFILE_ID =
   "switchpp-chatgpt-subscription";
@@ -73,15 +70,6 @@ export function buildClaudeCodeConnectionSummary(
   ].join("\n");
 }
 
-export function buildCursorConnectionSummary(config: SubscriptionProxyClientConfig) {
-  const baseUrl = config.baseUrl.replace(/\/+$/, "");
-  return [
-    `Base URL: ${/\/v1$/i.test(baseUrl) ? baseUrl : `${baseUrl}/v1`}`,
-    `API Key: ${config.apiKey}`,
-    `Model: ${config.model}`,
-  ].join("\n");
-}
-
 export function subscriptionProxyUsableModels(models: readonly string[]) {
   return [...new Set(models.map((model) => model.trim()))].filter(
     (model) =>
@@ -113,15 +101,6 @@ export function selectSubscriptionProxyModel(
   )[0] ?? usableModels[0] ?? "";
 }
 
-function subscriptionProxyBaseUrlForTarget(
-  baseUrl: string,
-  target: SubscriptionProxyTargetKey,
-) {
-  const normalized = baseUrl.trim().replace(/\/+$/, "");
-  if (target !== "grok_build" || /\/v1$/i.test(normalized)) return normalized;
-  return `${normalized}/v1`;
-}
-
 export function buildSubscriptionProxyProfile(
   config: SubscriptionProxyClientConfig,
   target: SubscriptionProxyTargetKey,
@@ -139,7 +118,6 @@ export function buildSubscriptionProxyProfile(
         supports_1m: false,
       }))
     : [{ name: model, supports_1m: false }];
-  const usesResponses = target === "grok_build";
 
   return {
     id: subscriptionProxyProfileIdForTarget(target),
@@ -148,12 +126,12 @@ export function buildSubscriptionProxyProfile(
     note:
       existing?.note.trim()
       || "通过 Switch++ 内置 CLIProxyAPI 使用 ChatGPT/Codex 订阅额度",
-    base_url: subscriptionProxyBaseUrlForTarget(config.baseUrl, target),
+    base_url: config.baseUrl.trim().replace(/\/+$/, ""),
     api_key: config.apiKey,
-    api_format: usesResponses ? "openai_responses" : "anthropic",
-    auth_field: usesResponses ? "OPENAI_API_KEY" : "ANTHROPIC_AUTH_TOKEN",
+    api_format: "anthropic",
+    auth_field: "ANTHROPIC_AUTH_TOKEN",
     use_full_url: false,
-    compat_mode: usesResponses ? "direct" : "proxy",
+    compat_mode: "proxy",
     upstream_model: model,
     model_map: modelMap,
     provider_model_map: providerModelMap,

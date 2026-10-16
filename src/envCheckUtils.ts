@@ -32,36 +32,6 @@ export function codexEnvConfigLabel(platform: EnvPlatform) {
   return "~/.codex/config.toml";
 }
 
-export function opencodeEnvConfigLabel(platform: EnvPlatform) {
-  if (platform === "windows") return "%USERPROFILE%\\.config\\opencode\\opencode.json";
-  return "~/.config/opencode/opencode.json";
-}
-
-export function ohMyOpenCodeEnvConfigLabel(platform: EnvPlatform) {
-  if (platform === "windows") return "%USERPROFILE%\\.config\\opencode\\oh-my-openagent.json";
-  return "~/.config/opencode/oh-my-openagent.json";
-}
-
-export function openclawEnvConfigLabel(platform: EnvPlatform) {
-  if (platform === "windows") return "%USERPROFILE%\\.openclaw\\openclaw.json";
-  return "~/.openclaw/openclaw.json";
-}
-
-export function hermesEnvConfigLabel(platform: EnvPlatform) {
-  if (platform === "windows") return "%USERPROFILE%\\.hermes\\config.yaml";
-  return "~/.hermes/config.yaml";
-}
-
-export function piEnvConfigLabel(platform: EnvPlatform) {
-  if (platform === "windows") return "%USERPROFILE%\\.pi\\agent\\models.json + settings.json";
-  return "~/.pi/agent/models.json + ~/.pi/agent/settings.json";
-}
-
-export function ohMyPiEnvConfigLabel(platform: EnvPlatform) {
-  if (platform === "windows") return "%USERPROFILE%\\.omp\\agent\\models.yml";
-  return "~/.omp/agent/models.yml";
-}
-
 export function claudeDesktopInstallHint(platform: EnvPlatform) {
   if (platform === "windows") {
     return "请自行前往 claude.ai/download 下载并安装 Claude Desktop。默认检查 %LOCALAPPDATA%\\Programs\\Claude\\Claude.exe。";
@@ -117,13 +87,6 @@ export function markDeletedEnvConfig(results: EnvCheckResult, path: string): Env
   const claudeCliConfigs = markDeleted(results.claude_cli_configs);
   const claudeDesktopConfigs = markDeleted(results.claude_desktop_configs);
   const codexConfigs = markDeleted(results.codex_configs);
-  const opencodeConfigs = markDeleted(results.opencode_configs);
-  const ohMyOpenCodeConfigs = markDeleted(results.oh_my_opencode_configs);
-  const openclawConfigs = markDeleted(results.openclaw_configs);
-  const hermesConfigs = markDeleted(results.hermes_configs);
-  const piConfigs = markDeleted(results.pi_configs);
-  const ohMyPiConfigs = markDeleted(results.oh_my_pi_configs);
-  const antigravityConfigs = markDeleted(results.antigravity_configs);
 
   return {
     ...results,
@@ -133,19 +96,5 @@ export function markDeletedEnvConfig(results: EnvCheckResult, path: string): Env
     claude_desktop_configs: claudeDesktopConfigs,
     codex_config_exists: primaryExists(codexConfigs),
     codex_configs: codexConfigs,
-    opencode_config_exists: primaryExists(opencodeConfigs),
-    opencode_configs: opencodeConfigs,
-    oh_my_opencode_config_exists: primaryExists(ohMyOpenCodeConfigs),
-    oh_my_opencode_configs: ohMyOpenCodeConfigs,
-    openclaw_config_exists: primaryExists(openclawConfigs),
-    openclaw_configs: openclawConfigs,
-    hermes_config_exists: primaryExists(hermesConfigs),
-    hermes_configs: hermesConfigs,
-    pi_config_exists: primaryExists(piConfigs),
-    pi_configs: piConfigs,
-    oh_my_pi_config_exists: primaryExists(ohMyPiConfigs),
-    oh_my_pi_configs: ohMyPiConfigs,
-    antigravity_config_exists: primaryExists(antigravityConfigs),
-    antigravity_configs: antigravityConfigs,
   };
 }

@@ -2,14 +2,14 @@
 
 English version: [README.en.md](README.en.md)
 
-Switch++ 是一个桌面端配置切换、模型路由和本地兼容网关工具，用来把第三方模型接入 Claude Code、Claude Desktop、Codex CLI、Codex Desktop 以及常见本地 AI coding agent。也可以按 Claude Code 第三方模型、Codex 第三方模型、Codex 配置切换、Claude Desktop 本地网关、OpenAI-compatible 代理或 Anthropic-compatible 代理这类关键词理解它的使用场景。
+Switch++ 是一个桌面端配置切换、模型路由和本地兼容网关工具，用来把第三方模型接入 Claude Code、Claude Desktop、Codex CLI和 Codex Desktop。也可以按 Claude Code 第三方模型、Codex 第三方模型、Codex 配置切换、Claude Desktop 本地网关、OpenAI-compatible 代理或 Anthropic-compatible 代理这类关键词理解它的使用场景。
 
 - 下载地址：https://github.com/sssstwee/switch-plus-plus/releases/latest
 - 下载页与使用指南：https://sssstwee.github.io/switch-plus-plus/
 
 ## 它解决什么问题
 
-- 在一个桌面应用里管理 Claude、Codex 和本地 agent 的多套模型配置。
+- 在一个桌面应用里管理 Claude Code、Claude Desktop 和 Codex 的多套模型配置。
 - 在官方账号配置和第三方模型配置之间快速切换。
 - 用本地兼容网关处理 Anthropic、OpenAI、Responses 和 Chat Completions 之间的协议差异。
 - 在写入本地配置前预览 JSON / TOML，并自动保留备份。
@@ -52,12 +52,6 @@ Switch++ 是一个桌面端配置切换、模型路由和本地兼容网关工�
 | Claude Code | CLI settings、模型映射、网关环境变量、功能开关 | `~/.claude/settings.json` |
 | Claude Desktop | 桌面端第三方配置库 | macOS: `~/Library/Application Support/Claude-3p/configLibrary`; Windows: `%APPDATA%\Claude-3p\configLibrary` |
 | Codex | 官方登录配置和第三方厂商配置 | `~/.codex/auth.json`, `~/.codex/config.toml` |
-| OpenCode | OpenAI-compatible provider、默认模型、small model | `~/.config/opencode/opencode.json` |
-| Oh My OpenAgent | agents/categories 模型路由，并同步 OpenCode provider | `~/.config/opencode/oh-my-openagent.json` |
-| OpenClaw | provider 与默认 agent 模型 | `~/.openclaw/openclaw.json` |
-| Hermes Agent | custom provider 与默认模型 | `~/.hermes/config.yaml` |
-| Pi | custom provider、默认 provider 与默认模型 | `~/.pi/agent/models.json`, `~/.pi/agent/settings.json` |
-| Oh My Pi | provider 与 agent/category 模型路由 | `~/.omp/agent/models.yml` |
 
 ## 界面预览
 
@@ -166,7 +160,7 @@ open "/Applications/Switch++.app"
 
 ## 搜索关键词
 
-Switch++, Switch Plus Plus, switchpp, switch-plus-plus, cc3p, Claude Code 第三方模型, Claude Code 配置切换, Claude Code 网关, Claude Desktop 第三方模型, Codex 第三方模型, Codex CLI, Codex Desktop, Codex 配置切换, Codex 本地网关, Agent Router, model router, model switcher, LLM gateway, Claude Code third-party models, Claude Desktop, Codex third-party models, Hermes, OpenCode, OpenClaw, Pi, DeepSeek Codex, Kimi Codex, MiniMax Claude Code, GLM Codex, OpenAI-compatible, Anthropic-compatible, local compatibility gateway.
+Switch++, Switch Plus Plus, switchpp, switch-plus-plus, cc3p, Claude Code 第三方模型, Claude Code 配置切换, Claude Code 网关, Claude Desktop 第三方模型, Codex 第三方模型, Codex CLI, Codex Desktop, Codex 配置切换, Codex 本地网关, Agent Router, model router, model switcher, LLM gateway, Claude Code third-party models, Claude Desktop, Codex third-party models, DeepSeek Codex, Kimi Codex, MiniMax Claude Code, GLM Codex, OpenAI-compatible, Anthropic-compatible, local compatibility gateway.
 
 ## 版权与许可
 

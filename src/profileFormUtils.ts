@@ -75,8 +75,7 @@ export function defaultAuthFieldForApiFormat(apiFormat: ApiFormat): AuthField {
 export function customApiFormatsForTarget(targetKey: TargetKey): ApiFormat[] {
   if (targetKey === "codex") return ["openai_responses", "openai_chat"];
   if (targetKey === "claude_cli" || targetKey === "claude_desktop") return ["anthropic", "openai_chat"];
-  if (targetKey === "grok_build") return ["openai_chat", "openai_responses", "anthropic"];
-  if (targetKey === "opencode" || targetKey === "oh_my_opencode") return ["openai_chat", "anthropic", "openai_responses", "kimi"];
+
   return ["openai_chat", "anthropic", "openai_responses", "gemini", "kimi"];
 }
 
@@ -210,7 +209,6 @@ export function providerModelMapFallback(form: AddForm, preset: VendorPreset | n
 export function providerModelPlaceholder(key: keyof ModelMap, form: AddForm, preset: VendorPreset | null) {
   return preset?.model_map[key]?.trim() || form.model.trim() || form.model_map[key].trim() || "上游真实模型";
 }
-
 
 export function presetManagedGatewayBaseUrl(profile: GatewayProfile, preset: VendorPreset | null, targetKey: TargetKey) {
   if (!preset || preset.id === "custom") return profile.base_url;

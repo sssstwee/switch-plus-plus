@@ -9,7 +9,6 @@ import type { AddForm } from "./appTypes.ts";
 import {
   configOptionItemsForTarget,
   defaultGatewayConfigOptions,
-  getTargetConfigOptionSupport,
   recommendedClaudeDesktopConfigOptionKeys,
   recommendedCodexConfigOptionsForForm,
   withRecommendedGatewayTargetConfigOptions,
@@ -60,7 +59,7 @@ const parts = buildCodexConfigOptionTomlParts({
 
 includes(parts.topLevelLines, 'model_reasoning_effort = "high"');
 includes(parts.topLevelLines, 'model_reasoning_summary = "detailed"');
-includes(parts.topLevelLines, "model_supports_reasoning_summaries = true");
+excludes(parts.topLevelLines, "model_supports_reasoning_summaries = true");
 includes(parts.topLevelLines, 'model_verbosity = "low"');
 includes(parts.topLevelLines, "show_raw_agent_reasoning = true");
 includes(parts.topLevelLines, 'web_search = "live"');
@@ -163,7 +162,7 @@ equal(gpt5ReasoningSupport.statusText, "建议勾选");
 equal(gpt5ReasoningSupport.tone, "ok");
 
 for (const presetId of ["openai", "openai-package"]) {
-  for (const model of ["gpt-6-astra", "gpt-6-sol", "gpt-6-luna"]) {
+  for (const model of ["gpt-6-astra", "gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna"]) {
     const context = {
       model,
       compatMode: "direct" as const,
@@ -317,7 +316,6 @@ equal(openAiRecommendedCodexOptions.disable_response_storage, false);
 equal(openAiRecommendedCodexOptions.disable_websockets, false);
 
 const deepseekPreset = allVendorPresets.find((preset) => preset.id === "deepseek") ?? null;
-const anthropicPreset = allVendorPresets.find((preset) => preset.id === "anthropic") ?? null;
 const recommendedGatewayOptions = withRecommendedGatewayConfigOptions(
   {
     ...defaultGatewayConfigOptions,
@@ -393,31 +391,6 @@ const claudeOptionKeys = configOptionItemsForTarget("claude_cli", false).map((op
 for (const key of hiddenClaudeOptionKeys) {
   excludes(claudeOptionKeys, key);
 }
-
-const opencodeOptions = configOptionItemsForTarget("opencode", false);
-const opencodeRequireApproval = opencodeOptions.find((option) => option.key === "opencode_require_approval");
-if (!opencodeRequireApproval) {
-  throw new Error("Expected OpenCode options to include opencode_require_approval");
-}
-
-const deepseekOpenCodeSupport = getTargetConfigOptionSupport(opencodeRequireApproval, "opencode", deepseekPreset);
-equal(deepseekOpenCodeSupport.supported, true);
-equal(deepseekOpenCodeSupport.detail.includes("DeepSeek"), true);
-equal(deepseekOpenCodeSupport.detail.includes("OpenCode 官方配置"), true);
-equal(deepseekOpenCodeSupport.source.url, "https://api-docs.deepseek.com/quick_start/agent_integrations/opencode");
-
-const anthropicOpenCodeSupport = getTargetConfigOptionSupport(opencodeRequireApproval, "opencode", anthropicPreset);
-equal(anthropicOpenCodeSupport.supported, false);
-equal(anthropicOpenCodeSupport.detail.includes("未找到 Anthropic API 面向 OpenCode 的专用适配"), true);
-
-const recommendedOpenCodeOptions = withRecommendedGatewayTargetConfigOptions(
-  { ...defaultGatewayConfigOptions },
-  "opencode",
-  deepseekPreset,
-  false,
-);
-equal(recommendedOpenCodeOptions.opencode_require_approval, true);
-equal(recommendedOpenCodeOptions.opencode_provider_allowlist, false);
 
 const mergedOfficialToml = mergeCodexConfigOptionsIntoToml(
   [
@@ -495,3 +468,11 @@ const clearedOssProviderToml = mergeCodexConfigOptionsIntoToml(
   { ...defaultCodexConfigOptions, oss_provider: "" },
 );
 excludes(clearedOssProviderToml.split("\n"), 'oss_provider = "ollama"');
+
+equal(codexConfigOptionItems.some((item) => item.key === "force_reasoning_summaries"), false);
+const migratedSummaryConfig = mergeCodexConfigOptionsIntoToml(
+  'model = "gpt-6.1-sol"\nmodel_supports_reasoning_summaries = true',
+  { ...defaultCodexConfigOptions, force_reasoning_summaries: true },
+);
+equal(migratedSummaryConfig.includes("model_supports_reasoning_summaries"), false);
+equal(migratedSummaryConfig.includes('model = "gpt-6.1-sol"'), true);
