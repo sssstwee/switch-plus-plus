@@ -172,9 +172,11 @@ export function buildPresetFamilies(target: TargetKey): PresetFamily[] {
     familyMap.set(key, [...(familyMap.get(key) ?? []), preset]);
   }
 
+  const officialFamily = isCodexTarget(target) ? "openai" : "anthropic";
+  const rank = (key: string) => key === "custom" ? 0 : key === officialFamily ? 1 : 2;
   return Array.from(familyMap, ([key, presets]) => ({
     key,
     name: presetFamilyName(key, presets),
     presets,
-  }));
+  })).sort((left, right) => rank(left.key) - rank(right.key));
 }

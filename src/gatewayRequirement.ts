@@ -91,7 +91,6 @@ type VendorCapabilityKind =
   | "siliconflow"
   | "zai"
   | "openrouter"
-  | "google"
   | "modelscope"
   | "generic";
 
@@ -114,7 +113,6 @@ function vendorCapabilityKind(profile: CodexProfile | GatewayProfile, preset?: V
   if (source.includes("siliconflow")) return "siliconflow";
   if (source.includes("zai") || source.includes("glm") || source.includes("bigmodel")) return "zai";
   if (source.includes("openrouter")) return "openrouter";
-  if (source.includes("google") || source.includes("gemini") || baseUrl.includes("generativelanguage.googleapis.com")) return "google";
   if (source.includes("modelscope")) return "modelscope";
   return "generic";
 }
@@ -190,9 +188,6 @@ function gatewayCapabilityLimitation(target: TargetKey, profile: CodexProfile | 
     if (kind === "openrouter") {
       return "仍有限制：OpenRouter 按模型声明 input_modalities；Codex 的厂商连接或本地网关都不会改变所选模型是否支持 image/file 输入。";
     }
-    if (kind === "google") {
-      return "仍有限制：Gemini 的图片能力取决于所选模型、Codex 请求内容和 Gemini 文件/图片限制；本地网关只负责 Codex 到 Gemini 上游的连接适配，不能改变模型能力。";
-    }
     if (kind === "modelscope") {
       return "仍有限制：ModelScope 当前 Codex 预设面向代码/文本模型；图片能力需换成明确支持视觉的模型，本地网关不会补齐模型能力。";
     }
@@ -201,9 +196,7 @@ function gatewayCapabilityLimitation(target: TargetKey, profile: CodexProfile | 
 
   if (target === "claude_cli" || target === "claude_desktop") {
     if (kind === "deepseek") {
-      return target === "claude_desktop"
-        ? "仍有限制：DeepSeek-Flash（V4.1）支持原生图片；V4-Pro 为纯文本，可在 Claude Desktop 中选择视觉代理生成图片描述；文件与工具内容仍受厂商协议限制。"
-        : "仍有限制：DeepSeek-Flash（V4.1）支持原生图片；V4-Pro 为纯文本，图片需改用 Flash 或视觉代理；文件与工具内容仍受厂商协议限制。";
+      return "仍有限制：DeepSeek-Flash（V4.1）原生支持图片，图片直接发送给所选上游模型；纯文本模型请切换到支持图片的型号。";
     }
     if (kind === "minimax") {
       return "仍有限制：MiniMax M3 原生支持图片和视频，但能力仍取决于 Claude 请求内容和 MiniMax 兼容端点；本地网关不能绕过格式、大小和计费限制。";
@@ -225,9 +218,6 @@ function gatewayCapabilityLimitation(target: TargetKey, profile: CodexProfile | 
     }
     if (kind === "openrouter") {
       return "仍有限制：OpenRouter 按模型声明 input_modalities；只有带 image/file 等输入模态的模型能处理图片或文档，本地网关不会改变所选模型的模态能力。";
-    }
-    if (kind === "google") {
-      return "仍有限制：Gemini 的多模态能力取决于所选模型、Claude 请求内容和 Gemini 文件/图片限制；本地网关只做 Claude 到 Gemini 上游的连接适配，不能改变模型能力。";
     }
     if (kind === "modelscope") {
       return "仍有限制：ModelScope 当前 Claude 预设面向代码/文本模型；图片能力需选择明确支持视觉且适合 Claude 接入的模型，本地网关不能补齐上游模型能力。";

@@ -151,7 +151,9 @@ equal(gatewayProfileUsesProxyForTarget(deepseekDirectProfile, "claude_desktop"),
 equal(resolveGatewayUpstreamModel(baseProfile, preset), "deepseek-v4-pro");
 equal(extractTomlAssignment('model = "gpt-5.5"\nmodel_provider = "openai"', "model"), "gpt-5.5");
 
-for (const model of ["deepseek-flash", "claude-fable-5-1", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "MiniMax-M3.1-Flash-Preview", "glm-5.3", "glm-5.3-flash", "kimi-k3", "k3", "kimi-for-coding", "gemini-4-argon", "gemini-3.8-flash"]) {
+for (const model of ["deepseek-flash", "claude-fable-5-1", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "glm-5.3", "glm-5.3-flash", "kimi-k3", "k3", "kimi-for-coding", "gemini-4-argon", "gemini-3.8-flash"]) {
   equal(modelSupports1mContext(model), true);
 }
 equal(modelSupports1mContext("k3-256k"), false);
+
+equal(modelSupports1mContext("MiniMax-M3.1-Flash-Preview"), false);

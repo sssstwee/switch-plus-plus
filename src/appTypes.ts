@@ -80,11 +80,11 @@ export type GatewayProfile = {
   use_full_url: boolean;
   compat_mode?: CodexCompatMode;
   upstream_model?: string;
-  vision_profile_id?: string;
   model_map: ModelMap;
   provider_model_map?: ModelMap;
   config_options: GatewayConfigOptions;
   models: GatewayModel[];
+  model_metadata?: ProviderModel[];
   updated_at: number;
 };
 
@@ -101,6 +101,7 @@ export type CodexProfile = {
   model: string;
   models?: string[];
   models_user_defined?: boolean;
+  model_metadata?: ProviderModel[];
   auth_json: string;
   config_toml: string;
   model_catalog_json?: string;
@@ -296,7 +297,20 @@ export type RestartAppResult = {
   detail: string;
 };
 
+export type ProviderModel = {
+  id: string;
+  name: string;
+  created_at?: string | number | null;
+  input_modalities: string[];
+  supports_text?: boolean | null;
+  context_window?: number | null;
+  max_output_tokens?: number | null;
+  reasoning_efforts?: string[];
+  default_reasoning?: string | null;
+};
+
 export type ModelDiscoveryResult = {
+  details: ProviderModel[];
   models: string[];
   endpoint: string;
 };
@@ -360,7 +374,6 @@ export type AddForm = {
   auth_field: AuthField;
   use_full_url: boolean;
   model: string;
-  vision_profile_id?: string;
   auth_json: string;
   config_toml: string;
   hide_think_blocks: boolean;

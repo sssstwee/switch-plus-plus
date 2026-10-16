@@ -480,13 +480,13 @@ const directThirdPartyDesktopPreview = buildClaudeDesktopProfileConfigPreview({
   provider_model_map: defaultModelMap("MiniMax-M2.7"),
 });
 
-includes(directThirdPartyDesktopPreview, '"agentSwitchClient": "Claude Desktop"');
-includes(directThirdPartyDesktopPreview, '"agentSwitchRoute": "direct"');
-includes(directThirdPartyDesktopPreview, '"agentSwitchUpstreamBaseUrl": "https://api.minimaxi.com/anthropic"');
+excludes(directThirdPartyDesktopPreview, '"agentSwitchClient": "Claude Desktop"');
+excludes(directThirdPartyDesktopPreview, '"agentSwitchRoute": "direct"');
+excludes(directThirdPartyDesktopPreview, '"agentSwitchUpstreamBaseUrl": "https://api.minimaxi.com/anthropic"');
 includes(directThirdPartyDesktopPreview, '"coworkEgressAllowedHosts": [');
 includes(directThirdPartyDesktopPreview, '"*"');
 includes(directThirdPartyDesktopPreview, '"inferenceGatewayBaseUrl": "https://api.minimaxi.com/anthropic"');
-includes(directThirdPartyDesktopPreview, '"agentSwitchUpstreamModel": "MiniMax-M2.7"');
+excludes(directThirdPartyDesktopPreview, '"agentSwitchUpstreamModel": "MiniMax-M2.7"');
 
 const directAnthropicDesktopPreview = buildClaudeDesktopProfileConfigPreview({
   ...baseCodexForm,
@@ -526,9 +526,9 @@ const bypassPermissionsDesktopPreview = buildClaudeDesktopProfileConfigPreview({
   } as AddForm["config_options"],
 });
 
-includes(bypassPermissionsDesktopPreview, '"permissions": {');
-includes(bypassPermissionsDesktopPreview, '"defaultMode": "bypassPermissions"');
-includes(bypassPermissionsDesktopPreview, '"bypass_permissions": true');
+excludes(bypassPermissionsDesktopPreview, '"permissions": {');
+excludes(bypassPermissionsDesktopPreview, '"defaultMode": "bypassPermissions"');
+excludes(bypassPermissionsDesktopPreview, '"bypass_permissions": true');
 
 const officialPackageDesktopPreview = buildClaudeDesktopProfileConfigPreview({
   ...baseCodexForm,
@@ -543,9 +543,9 @@ const officialPackageDesktopPreview = buildClaudeDesktopProfileConfigPreview({
   provider_model_map: defaultModelMap("claude-opus-4-7"),
 });
 
-includes(officialPackageDesktopPreview, '"agentSwitchClient": "Claude Desktop"');
-includes(officialPackageDesktopPreview, '"agentSwitchRoute": "official"');
-includes(officialPackageDesktopPreview, '"agentSwitchOfficialAuth": "claude.ai"');
+excludes(officialPackageDesktopPreview, '"agentSwitchClient": "Claude Desktop"');
+excludes(officialPackageDesktopPreview, '"agentSwitchRoute": "official"');
+excludes(officialPackageDesktopPreview, '"agentSwitchOfficialAuth": "claude.ai"');
 excludes(officialPackageDesktopPreview, '"disableDeploymentModeChooser"');
 excludes(officialPackageDesktopPreview, '"inferenceModels"');
 excludes(officialPackageDesktopPreview, '"coworkEgressAllowedHosts"');
@@ -581,4 +581,18 @@ for (const [presetId, model, expectedContext, images] of [
     includes(config, 'forced_login_method = "api"');
     includes(config, 'wire_api = "responses"');
   }
+}
+
+const desktopTelemetry = JSON.parse(buildClaudeDesktopProfileConfigPreview({ ...baseCodexForm, compat_mode:"proxy", api_format:"anthropic", base_url:"https://api.deepseek.com/anthropic", model:"deepseek-flash", provider_model_map:defaultModelMap("deepseek-flash"), config_options:{...baseCodexForm.config_options,disable_telemetry:true,api_timeout_long:true} }));
+equal(desktopTelemetry.inferenceModels[0].name,"Fable5");
+equal(desktopTelemetry.inferenceModels[0].labelOverride,"deepseek-flash");
+equal(desktopTelemetry.disableEssentialTelemetry,true);
+equal(desktopTelemetry.disableNonessentialTelemetry,true);
+equal(desktopTelemetry.inferenceStreamIdleTimeoutSec,600);
+equal(desktopTelemetry.configOptions,undefined);
+
+for (const [id, name] of [["deepseek-flash","DeepSeek-V4.1-Flash"],["glm-5.3","GLM-5.3"],["MiniMax-M3","MiniMax M3"]]) {
+  const config = JSON.parse(buildClaudeDesktopProfileConfigPreview({...baseCodexForm,compat_mode:"proxy",api_format:"anthropic",base_url:"https://example.com/anthropic",model:id,provider_model_map:defaultModelMap(id)},[{id,name,input_modalities:[]} ]));
+  equal(config.inferenceModels[0].name,"Fable5");
+  equal(config.inferenceModels[0].labelOverride,name);
 }

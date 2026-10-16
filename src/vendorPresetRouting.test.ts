@@ -30,9 +30,7 @@ const currentDefaultModels: Record<string, string> = {
   bailian: "qwen3.8-max",
   modelscope: "ZhipuAI/GLM-5.2",
   openai: "gpt-6-astra",
-  xai: "grok-4.7",
   anthropic: "claude-fable-5-1",
-  google: "gemini-3.8-flash",
   "minimax-global": "MiniMax-M3",
   "zai-global": "glm-5.3",
   "kimi-global": "kimi-k3",
@@ -62,9 +60,7 @@ const vendorTargetAdapterPresetIds = new Set([
   "minimax-coding-cn",
   "minimax-coding-global",
   "openai",
-  "xai",
   "openrouter",
-  "google",
   "siliconflow",
   "zai-global",
   "zai-coding",
@@ -139,23 +135,10 @@ const openai = allVendorPresets.find((preset) => preset.id === "openai");
 equal(openai?.codex_support_status, "responses");
 equal(openai ? vendorPresetApiFormatForTarget(openai, "codex") : "", "openai_responses");
 
-const xai = requiredPreset("xai");
-equal(xai.name, "xAI (Grok)");
-equal(xai.base_url, "https://api.x.ai/v1");
-equal(xai.model_map.main, "grok-4.7");
-equal(xai.models.join(","), "grok-4.7,grok-4.6,grok-4.5");
-equal(xai.codex_compat_mode, "direct");
-equal(xai.codex_support_status, "responses");
-equal(vendorPresetBaseUrlForTarget(xai, "codex"), "https://api.x.ai/v1");
-equal(vendorPresetApiFormatForTarget(xai, "codex"), "openai_responses");
+equal(allVendorPresets.some((preset) => preset.id === "xai" || preset.id === "google"), false);
 
 const anthropic = allVendorPresets.find((preset) => preset.id === "anthropic");
 equal(anthropic ? vendorPresetSourceUrlForTarget(anthropic, "claude_cli") : "", "https://platform.claude.com/docs/en/api/overview");
-
-const google = allVendorPresets.find((preset) => preset.id === "google");
-equal(google?.base_url, "https://generativelanguage.googleapis.com/v1beta/openai");
-equal(google?.api_format, "openai_chat");
-equal(google?.codex_support_status, "gateway");
 
 const minimaxCoding = allVendorPresets.find((preset) => preset.id === "minimax-coding-global");
 equal(minimaxCoding?.model_map.main, "MiniMax-M3.1-Flash-Preview");
@@ -304,14 +287,13 @@ const bailianCodexRequirement = gatewayRequirementForProfile(
 equal(bailianCodexRequirement.limitation?.includes("阿里百炼按量 API 支持 Responses"), true);
 equal(bailianCodexRequirement.limitation?.includes("Qwen3.8"), true);
 
-const googleCodexRequirement = gatewayRequirementForProfile(
-  "codex",
-  codexProfileForPresetForTest(requiredPreset("google")),
-  requiredPreset("google"),
-);
-equal(googleCodexRequirement.limitation?.includes("Gemini 的图片能力取决于所选模型"), true);
 const glmCodingModels = requiredPreset("zai-coding").models;
 equal(glmCodingModels.includes("glm-5.3-flash"), true);
 equal(glmCodingModels.includes("glm-5.3-flashx"), false);
 equal(requiredPreset("bailian-coding").models.includes("qwen3.8-max"), false);
 equal(requiredPreset("bailian-coding").models.includes("qwen3.6-flash"), false);
+
+for (const target of ["codex", "claude_cli", "claude_desktop"] as const) {
+  equal(buildPresetFamilies(target)[0].key, "custom");
+  equal(buildPresetFamilies(target)[1].key, target === "codex" ? "openai" : "anthropic");
+}

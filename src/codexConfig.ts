@@ -463,6 +463,15 @@ export function getCodexConfigOptionSupport(
   const isMinimaxResponses = context.presetId?.startsWith("minimax")
     && context.compatMode === "direct";
 
+  if (option.key === "high_reasoning" && context.presetId?.startsWith("zai-coding") && context.compatMode === "direct") {
+    return {
+      supported: true, statusText: "按需勾选", tone: "warn",
+      recommendation: "GLM-5.3 支持 low、high、max，默认 max；勾选后改用 high。",
+      detail: "使用 Coding Plan 专用 Responses 地址；其他参数以所选模型能力为准。",
+      source: { label: "GLM 官方 Codex 配置", url: "https://docs.z.ai/devpack/tool/codex" },
+    };
+  }
+
   if (option.key === "high_reasoning" && isMinimaxResponses) {
     return {
       supported: true,

@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.0.21 - 2026-10-16
+
+修复实时模型列表丢失官网名称、遗漏新型号和多模态模型的问题；删除视觉代理及 xAI、Google AI 厂商预设。
+
+### 功能亮点 / Highlights
+
+- 获取模型保留官网名称、API ID 与图片能力，按官网时间或返回顺序展示。取消旧型号白名单、每厂商两个候选与总数截断，增加列表搜索；刷新成功后不再混入过时的内置候选。
+- 修复模型列表鉴权，支持 Anthropic 游标和百炼分页；接口失败或分页不完整会明确报错，不把内置候选当作实时结果。API 仍以厂商实际开放的列表及账户权限为准。
+- 移除视觉代理配置、额外图片描述请求和缓存。图片直接传给所选上游，原生多模态输入不再被旧型号判断静默丢弃。
+- 移除 xAI 与 Google AI 厂商预设及专用识别。添加配置时自定义第一，Codex 的 OpenAI、Claude Code 与 Claude Desktop 的 Anthropic 紧随其后。
+
+- 按应用与厂商区分接入协议、密钥、地域和套餐提示；智谱/Z.ai Coding Plan 的 Codex 配置改用官方 Responses 端点，并提供 GLM-5.3 的正确推理档位。
+- 模型发现显示官网上下文、输出上限和推理能力；Codex 保存实时能力并应用到模型目录，保留厂商要求的专用客户端窗口。未知模型不再默认开启 1M，MiniMax M3.1 使用 512K。
+- 修复 Claude Desktop 重复模型别名覆盖主模型及 [1m] 后缀映射错误，合并重复映射字段；使用官方 labelOverride 按配置显示真实上游名称，保留当前客户端需要的兼容调用身份。
+- Claude Desktop 改写原生遥测及流式等待字段，清理客户端不识别的内部字段。保留完整工具定义、上游错误正文／状态和重试头，避免影响复杂工具调用及上下文自动压缩。官方登录隐藏 API Key，Anthropic API 支持实时模型选择。
+
+### 界面预览 / Screenshots
+
+DeepSeek 候选显示完整名称 `DeepSeek-V4.1-Flash`、API ID `deepseek-flash` 与“支持图片”；厂商预设按所属应用优先排列。
+
+### macOS 首次启动说明 / macOS First-Launch Notice
+
+Switch++ 尚未通过 Apple 公证（notarization）。安装到 `/Applications` 后，如被系统阻止，可运行：
+
+```bash
+sudo xattr -rd com.apple.quarantine "/Applications/Switch++.app"
+open "/Applications/Switch++.app"
+```
+
 ## v1.0.20 - 2026-10-16
 
 修复删除厂商配置后，重新打开应用又从旧版本数据或客户端配置中恢复的问题。

@@ -49,8 +49,7 @@ equal(officialCodexProfileForLocalSync([gatewayOnly, official])?.id, "official-p
 
 const emptyAddForm = createEmptyAddForm();
 equal(emptyAddForm.hide_think_blocks, true);
-equal(emptyAddForm.supports_1m_context, true);
-equal(emptyAddForm.vision_profile_id, "");
+equal(emptyAddForm.supports_1m_context, false);
 equal(openaiPackagePreset.models.join(","), "gpt-6-astra,gpt-6.1-sol,gpt-6-sol,gpt-6-luna");
 equal(openaiPackagePreset.models.some((model) => model.startsWith("gpt-5")), false);
 

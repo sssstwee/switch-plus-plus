@@ -11,6 +11,7 @@ import {
 import {
   defaultModelMap,
   isModelMapEmpty,
+  modelSupports1mContext,
   resolveGatewayFormCompatMode,
   resolveGatewayUpstreamModel,
 } from "./gatewayProfile.ts";
@@ -139,11 +140,10 @@ export function createEmptyAddForm(): AddForm {
     auth_field: "ANTHROPIC_AUTH_TOKEN",
     use_full_url: false,
     model: "",
-    vision_profile_id: "",
     auth_json: "",
     config_toml: "",
     hide_think_blocks: true,
-    supports_1m_context: true,
+    supports_1m_context: false,
     codex_config_options: { ...defaultCodexConfigOptions },
     model_map: defaultModelMap(""),
     provider_model_map: defaultModelMap(""),
@@ -154,9 +154,9 @@ export function createEmptyAddForm(): AddForm {
 
 function profileModelSupports1m(profile: GatewayProfile, model: string) {
   const canonical = model.trim().toLowerCase();
-  if (!canonical) return true;
+  if (!canonical) return false;
   const savedModel = profile.models.find((entry) => entry.name.trim().toLowerCase() === canonical);
-  return savedModel?.supports_1m ?? true;
+  return savedModel?.supports_1m ?? modelSupports1mContext(model);
 }
 
 export function officialCodexProfileForLocalSync(
@@ -236,11 +236,10 @@ export function formFromProfile(profile: GatewayProfile | CodexProfile, preset: 
       auth_field: "OPENAI_API_KEY",
       use_full_url: preset?.use_full_url ?? false,
       model,
-      vision_profile_id: "",
       auth_json: profile.auth_json ?? "",
       config_toml: profile.config_toml ?? "",
       hide_think_blocks: profile.hide_think_blocks ?? true,
-      supports_1m_context: profile.supports_1m_context ?? true,
+      supports_1m_context: profile.supports_1m_context ?? modelSupports1mContext(profile.model),
       codex_config_options: normalizeCodexConfigOptions(profile.codex_config_options),
       model_map: preset?.model_map ?? defaultModelMap(model),
       provider_model_map: preset?.model_map ?? defaultModelMap(model),
@@ -264,7 +263,6 @@ export function formFromProfile(profile: GatewayProfile | CodexProfile, preset: 
     auth_field: gatewayFormAuthFieldForTarget(profile.auth_field, preset, targetKey),
     use_full_url: profile.use_full_url,
     model: upstreamModel,
-    vision_profile_id: profile.vision_profile_id ?? "",
     auth_json: "",
     config_toml: "",
     hide_think_blocks: false,

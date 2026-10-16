@@ -4016,6 +4016,8 @@ button {
 }
 
 .ccr-model-candidates {
+  max-height: 240px;
+  overflow-y: auto;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;

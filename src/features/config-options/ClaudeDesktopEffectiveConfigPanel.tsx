@@ -6,14 +6,15 @@ type ClaudeDesktopEffectiveConfigPanelProps = {
 };
 
 const CLAUDE_DESKTOP_EFFECTIVE_CONFIG_ROWS = [
-  ["文件角色", "agentSwitchConfigRole"],
-  ["路由方式", "agentSwitchRoute"],
-  ["厂商上游地址", "agentSwitchUpstreamBaseUrl"],
   ["网关地址", "inferenceGatewayBaseUrl"],
-  ["API 格式", "inferenceGatewayApiFormat"],
-  ["认证字段", "inferenceGatewayAuthField"],
-  ["模型列表", "inferenceModels"],
+  ["认证方式", "inferenceGatewayAuthScheme"],
+  ["凭据来源", "inferenceCredentialKind"],
+  ["调用模型身份", "inferenceModels[].name"],
+  ["模型显示名称", "inferenceModels[].labelOverride"],
   ["当前厂商", "inferenceProvider"],
+  ["关闭基础遥测", "disableEssentialTelemetry"],
+  ["关闭使用统计", "disableNonessentialTelemetry"],
+  ["流式等待秒数", "inferenceStreamIdleTimeoutSec"],
 ] as const;
 
 export function ClaudeDesktopEffectiveConfigPanel({
@@ -37,7 +38,7 @@ export function ClaudeDesktopEffectiveConfigPanel({
       {open ? (
         <>
           <div className="ccr-note-box">
-            profile-id.json 是当前厂商的实际运行配置；_meta.json 只保存当前应用的 profile id 和列表索引。Claude Code 的高级 env/settings 开关不会在 Desktop 端直接生效。
+            profile-id.json 是当前厂商的实际运行配置；_meta.json 只保存当前应用的 profile id 和列表索引。模型显示名称使用官方 labelOverride 字段，调用仍保留兼容别名。Switch++ 内部信息只保存在自己的配置中；完全退出并重启 Claude 后生效。
           </div>
           <div className="ccr-desktop-effective-grid">
             {CLAUDE_DESKTOP_EFFECTIVE_CONFIG_ROWS.map(([label, field]) => (
@@ -46,10 +47,7 @@ export function ClaudeDesktopEffectiveConfigPanel({
                 <code>{field}</code>
               </div>
             ))}
-            <div className="ccr-desktop-effective-row muted">
-              <span>Switch++ 记录</span>
-              <code>configOptions</code>
-            </div>
+
           </div>
         </>
       ) : null}

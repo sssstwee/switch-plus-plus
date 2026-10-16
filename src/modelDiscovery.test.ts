@@ -1,145 +1,27 @@
-import {
-  filterProviderModelCandidates,
-  isAggregatorPreset,
-} from "./modelDiscovery.ts";
+import { deepStrictEqual, equal } from "node:assert/strict";
+import { filterProviderModelCandidates, orderProviderModels, providerModelLabel, providerModelSupports1m, providerModelCapabilityLabel } from "./modelDiscovery.ts";
 import { allVendorPresets } from "./vendorPresets.ts";
+import type { ProviderModel } from "./appTypes.ts";
 
-function equal<T>(actual: T, expected: T) {
-  if (actual !== expected) {
-    throw new Error(`Expected ${String(expected)}, got ${String(actual)}`);
-  }
+// Every remaining vendor must accept future IDs and multimodal text models.
+for (const preset of allVendorPresets) {
+  const models = ["future-model-9", "qwen-vl-new", "gpt-7-future", "provider/omni-new", "future-model-9"];
+  deepStrictEqual(filterProviderModelCandidates(models, preset), models.slice(0,4));
 }
+const largeList = Array.from({ length: 120 }, (_, i) => `provider/model-${i}`);
+deepStrictEqual(filterProviderModelCandidates(largeList, allVendorPresets.find((p) => p.id === "openrouter")),largeList);
+const model = (id: string, patch: Partial<ProviderModel> = {}): ProviderModel => ({id, name:id, input_modalities:[], ...patch});
+const flash = model("deepseek-flash", {name:"DeepSeek-V4.1-Flash",input_modalities:["text","image"]});
+const pro = model("deepseek-v4-pro");
+deepStrictEqual(orderProviderModels([flash,pro]).map((m) => m.id),[flash.id,pro.id]);
+equal(providerModelLabel(flash), "DeepSeek-V4.1-Flash · deepseek-flash · 支持图片");
+equal(providerModelLabel(pro),"deepseek-v4-pro");
+deepStrictEqual(orderProviderModels([model("old",{created_at:1}),model("new",{created_at:3}),model("embed",{supports_text:false})]).map((m)=>m.id),["new","old"]);
+deepStrictEqual(orderProviderModels([model("old",{created_at:"2025-01-01"}),model("new",{created_at:"2026-10-16"})]).map((m)=>m.id),["new","old"]);
+console.log("modelDiscovery tests passed");
 
-function includes(haystack: string[], needle: string) {
-  if (!haystack.includes(needle)) {
-    throw new Error(`Expected ${JSON.stringify(haystack)} to include ${needle}`);
-  }
-}
-
-function excludes(haystack: string[], needle: string) {
-  if (haystack.includes(needle)) {
-    throw new Error(`Expected ${JSON.stringify(haystack)} not to include ${needle}`);
-  }
-}
-
-const minimax = allVendorPresets.find((preset) => preset.id === "minimax-cn") ?? null;
-const minimaxModels = filterProviderModelCandidates(
-  ["MiniMax-M2.5", "MiniMax-M2.7", "MiniMax-M1"],
-  minimax,
-);
-includes(minimaxModels, "MiniMax-M2.7");
-includes(minimaxModels, "MiniMax-M2.5");
-includes(minimaxModels, "MiniMax-M1");
-
-const openaiPackage = allVendorPresets.find((preset) => preset.id === "openai-package") ?? null;
-const openaiApi = allVendorPresets.find((preset) => preset.id === "openai") ?? null;
-const officialCodexModels = filterProviderModelCandidates(
-  [
-    "gpt-6-luna",
-    "gpt-5.3-codex-spark",
-    "gpt-6-sol",
-    "gpt-6.1-sol",
-    "gpt-6-astra",
-    "gpt-5.6-luna",
-    "gpt-5.4-mini",
-    "gpt-5.5",
-    "gpt-5.6-terra",
-    "gpt-5.4",
-    "gpt-5.6-sol",
-  ],
-  openaiPackage,
-);
-equal(
-  officialCodexModels.join(","),
-  "gpt-6-astra,gpt-6.1-sol,gpt-6-sol,gpt-6-luna",
-);
-excludes(officialCodexModels, "gpt-5.6-sol");
-equal(filterProviderModelCandidates(["gpt-5.5"], openaiPackage).length, 0);
-equal(filterProviderModelCandidates(["gpt-5.5"], openaiApi).length, 0);
-
-const openrouter = allVendorPresets.find((preset) => preset.id === "openrouter") ?? null;
-equal(isAggregatorPreset(openrouter), true);
-const aggregatedModels = filterProviderModelCandidates(
-  [
-    "openai/gpt-4.1",
-    "openai/gpt-5.4",
-    "openai/gpt-5.5",
-    "anthropic/claude-sonnet-4.5",
-    "anthropic/claude-sonnet-4.6",
-    "google/gemini-2.5-pro",
-    "google/gemini-3-pro",
-    "deepseek/deepseek-v3.1",
-    "deepseek/deepseek-v4-pro",
-    "qwen/qwen2.5-coder",
-    "qwen/qwen3.6-coder",
-    "moonshotai/kimi-k2.5",
-    "moonshotai/kimi-k2.6",
-    "zai/glm-4.7",
-    "zai/glm-5.1",
-    "meta-llama/llama-3.1-405b",
-    "meta-llama/llama-4-maverick",
-    "obscure-lab/experimental-123",
-  ],
-  openrouter,
-);
-
-equal(aggregatedModels.length <= 30, true);
-includes(aggregatedModels, "openai/gpt-5.5");
-includes(aggregatedModels, "anthropic/claude-sonnet-4.6");
-includes(aggregatedModels, "google/gemini-3-pro");
-includes(aggregatedModels, "deepseek/deepseek-v4-pro");
-includes(aggregatedModels, "qwen/qwen3.6-coder");
-includes(aggregatedModels, "moonshotai/kimi-k2.6");
-includes(aggregatedModels, "zai/glm-5.1");
-includes(aggregatedModels, "meta-llama/llama-4-maverick");
-excludes(aggregatedModels, "obscure-lab/experimental-123");
-
-const bailian = allVendorPresets.find((preset) => preset.id === "bailian") ?? null;
-equal(isAggregatorPreset(bailian), true);
-const bailianModels = filterProviderModelCandidates(
-  [
-    "qwen-max-0919",
-    "qwen-coder-turbo-0919",
-    "siliconflow/deepseek-r1-0528",
-    "qwen3.5-livetranslate-flash-realtime-2026-05-19",
-    "qvq-max-2025-05-15",
-    "qvq-plus-2025-05-15",
-    "MiniMax/MiniMax-M2.7",
-    "wan2.7-image-pro",
-    "siliconflow/deepseek-v3-0324",
-    "kimi-k2.6",
-    "ZHIPU/GLM-5.1",
-    "deepseek-v4-flash",
-    "tongyi-xiaomi-analysis-pro",
-    "gui-plus",
-    "z-image-turbo",
-    "qwen3.6-plus",
-    "qwen3.6-flash",
-    "qwen3-coder-plus",
-  ],
-  bailian,
-);
-
-equal(bailianModels[0], "MiniMax/MiniMax-M2.7");
-includes(bailianModels, "qwen3-coder-plus");
-includes(bailianModels, "qwen3.6-flash");
-includes(bailianModels, "siliconflow/deepseek-v3-0324");
-includes(bailianModels, "siliconflow/deepseek-r1-0528");
-includes(bailianModels, "kimi-k2.6");
-includes(bailianModels, "ZHIPU/GLM-5.1");
-excludes(bailianModels, "qwen3.5-livetranslate-flash-realtime-2026-05-19");
-excludes(bailianModels, "wan2.7-image-pro");
-excludes(bailianModels, "qvq-max-2025-05-15");
-excludes(bailianModels, "z-image-turbo");
-
-// A server-advertised minor release must survive even if bundled presets predate it.
-const liveOpenAiModels = filterProviderModelCandidates(
-  ["gpt-6.2-sol", "gpt-6.1-sol", "gpt-5.5", "gpt-image-2", "gpt-6.2-sol-audio-preview"],
-  openaiApi,
-);
-includes(liveOpenAiModels, "gpt-6.2-sol");
-includes(liveOpenAiModels, "gpt-6.1-sol");
-excludes(liveOpenAiModels, "gpt-5.5");
-excludes(liveOpenAiModels, "gpt-image-2");
-excludes(liveOpenAiModels, "gpt-6.2-sol-audio-preview");
-excludes(filterProviderModelCandidates(["openai/gpt-6.1-sol:batch", "openai/gpt-6.1-sol"], openrouter), "openai/gpt-6.1-sol:batch");
+equal(providerModelSupports1m("unknown-model"), false);
+equal(providerModelSupports1m("MiniMax-M3.1-Flash-Preview"), false);
+equal(providerModelSupports1m("deepseek-flash", [model("deepseek-flash", {context_window: 128000})]), false);
+equal(providerModelSupports1m("future-model", [model("future-model", {context_window: 1048576})]), true);
+equal(providerModelCapabilityLabel(model("m", {context_window:524288, reasoning_efforts:["high","max"],default_reasoning:"max"})), "上下文 524,288 tokens；推理强度 high / max（默认 max）");

@@ -682,9 +682,12 @@ export function getTargetConfigOptionSupport(
 ): ConfigOptionSupport {
   const appLabel = targetLabel(target);
 
-  if (target === "claude_cli" || target === "claude_desktop") {
-    return getConfigOptionSupport(option.key, preset);
+  if (target === "claude_desktop") {
+    return { supported: ["api_timeout_long", "disable_telemetry", "disable_nonessential_traffic"].includes(option.key),
+      source: { label: "Claude Desktop 官方配置", url: "https://claude.com/docs/third-party/claude-desktop/configuration" },
+      detail: "写入 Claude Desktop 原生配置字段；完全退出并重新打开 Claude 后生效。" };
   }
+  if (target === "claude_cli") return getConfigOptionSupport(option.key, preset);
 
   if (!preset || preset.id === "custom") {
     return {
@@ -791,7 +794,15 @@ function isGatewayOnlyConfigOption(option: GatewayConfigOptionKey) {
 export function configOptionItemsForTarget(target: TargetKey, isOfficialAnthropicDirect: boolean) {
 
   if (target === "claude_desktop") {
-    return gatewayConfigOptionItems.filter((option) => recommendedClaudeDesktopConfigOptionKeys.has(option.key));
+    const nativeOptions = {
+      api_timeout_long: { label: "延长流式等待", description: "写入 inferenceStreamIdleTimeoutSec=600，在模型持续发送保活消息时允许更长的等待。" },
+      disable_telemetry: { label: "禁用遥测", description: "写入 disableEssentialTelemetry 和 disableNonessentialTelemetry，关闭桌面端崩溃、性能与使用统计上报。" },
+      disable_nonessential_traffic: { label: "禁用使用统计", description: "写入 disableNonessentialTelemetry，关闭产品使用统计和诊断上传。" },
+    };
+    return gatewayConfigOptionItems.filter((option) => option.key in nativeOptions).map((option) => ({
+      ...option, ...nativeOptions[option.key as keyof typeof nativeOptions],
+      configFields: option.key === "api_timeout_long" ? ["inferenceStreamIdleTimeoutSec"] : option.key === "disable_telemetry" ? ["disableEssentialTelemetry", "disableNonessentialTelemetry"] : ["disableNonessentialTelemetry"],
+    }));
   }
   const claudeOptions = gatewayConfigOptionItems.filter((option) => !hiddenClaudeConfigOptionKeys.has(option.key));
   return isOfficialAnthropicDirect

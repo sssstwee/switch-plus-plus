@@ -1,3 +1,4 @@
+import { providerSetupHints, providerSetupValidation } from "./providerSetup.ts";
 import { listen } from "@tauri-apps/api/event";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import {
@@ -65,6 +66,7 @@ import type {
   AddForm,
   ApiFormat,
   AppState,
+  ProviderModel,
   AuthField,
   CodexCompatMode,
   CodexProfile,
@@ -156,7 +158,7 @@ import {
 import { Button, Card, Chip, Input, Switch, Tooltip } from "./nativeUi.tsx";
 import { reorderProfilesById } from "./profileOrdering.ts";
 import { isProxyTarget, type ProxyTargetKey } from "./proxyTargets.ts";
-import { filterProviderModelCandidates } from "./modelDiscovery.ts";
+import { filterProviderModelCandidates, orderProviderModels, providerModelSupports1m } from "./modelDiscovery.ts";
 import { targetOptions, visibleTargetOptions } from "./targetOptions.ts";
 import { targetIconByKey } from "./targetIcons.tsx";
 import {
@@ -572,6 +574,8 @@ function App() {
     resetGatewayHistoryView: gatewayState.resetGatewayHistoryView,
   })));
   const [modelDiscoveryBusy, setModelDiscoveryBusy] = useState(false);
+  const [discoveredModelDetails, setDiscoveredModelDetails] = useState<ProviderModel[]>([]);
+  const modelDiscoveryRequest = useRef(0);
   const [discoveredProviderModels, setDiscoveredProviderModels] = useState<string[]>([]);
   const [codexExtraModels, setCodexExtraModels] = useState<string[]>([]);
   const [modelDiscoveryEndpoint, setModelDiscoveryEndpoint] = useState("");
@@ -743,10 +747,15 @@ function App() {
     [state],
   );
 
+  const savedEditingProfile = currentProfiles.find((profile) => profile.id === editingId);
+  const currentModelMetadata = modelDiscoveryEndpoint ? discoveredModelDetails
+    : savedEditingProfile?.base_url === addForm.base_url && savedEditingProfile?.api_key === addForm.api_key
+      ? savedEditingProfile.model_metadata ?? [] : [];
+
   const targetConfigPreview = useMemo(() => buildTargetConfigPreview(addForm, target), [addForm, target]);
   const desktopProfileConfigPreview = useMemo(
-    () => buildClaudeDesktopProfileConfigPreview(addForm),
-    [addForm],
+    () => buildClaudeDesktopProfileConfigPreview(addForm, currentModelMetadata),
+    [addForm, currentModelMetadata],
   );
   const desktopMetaConfigPreview = useMemo(
     () => buildClaudeDesktopMetaConfigPreview(state, editingId, addForm),
@@ -771,15 +780,23 @@ function App() {
     if (isCodexTarget(target) && addForm.connection_mode !== "official") {
       return uniqueModelNames(discoveredProviderModels);
     }
+    if (modelDiscoveryEndpoint) return discoveredProviderModels;
     const names = [
-      ...discoveredProviderModels,
       ...(currentSelectedPreset?.models ?? []),
       currentSelectedPreset?.model_map.main ?? "",
     ]
       .map((model) => model.trim())
       .filter(Boolean);
     return filterProviderModelCandidates(names, currentSelectedPreset);
-  }, [addForm.connection_mode, currentSelectedPreset, discoveredProviderModels, target]);
+  }, [addForm.connection_mode, currentSelectedPreset, discoveredProviderModels, modelDiscoveryEndpoint, target]);
+
+  useEffect(() => {
+    modelDiscoveryRequest.current += 1;
+    setDiscoveredProviderModels([]);
+    setDiscoveredModelDetails([]);
+    setModelDiscoveryEndpoint("");
+    setModelDiscoveryBusy(false);
+  }, [target, selectedPreset, addForm.base_url, addForm.api_key, addForm.auth_field]);
 
   // Stable callbacks for GatewayPage to avoid unnecessary re-renders
   const handleGatewayBack = useCallback(() => { setView("list"); setEditingId(null); }, []);
@@ -1665,11 +1682,10 @@ function App() {
       auth_field: isCodexTarget(targetKey) ? "OPENAI_API_KEY" : vendorPresetAuthFieldForTarget(preset, targetKey),
       use_full_url: preset.use_full_url,
       model,
-      vision_profile_id: "",
       auth_json: "",
       config_toml: "",
       hide_think_blocks: true,
-      supports_1m_context: true,
+      supports_1m_context: preset.id !== "custom" && preset.id !== "kimi-code" && providerModelSupports1m(model),
       codex_config_options: { ...defaultCodexConfigOptions },
       model_map: targetKey === "claude_desktop" ? claudeDesktopGatewayModelMap : preset.model_map,
       provider_model_map: preset.model_map,
@@ -1868,7 +1884,7 @@ function App() {
         auth_json: "",
         config_toml: "",
         hide_think_blocks: true,
-        supports_1m_context: true,
+        supports_1m_context: false,
         codex_config_options: { ...defaultCodexConfigOptions },
         model_map: target === "claude_desktop" ? claudeDesktopGatewayModelMap : preset.model_map,
         provider_model_map: preset.model_map,
@@ -1962,6 +1978,8 @@ function App() {
     if (form.api_key.trim() && !isAsciiHeaderValue(form.api_key.trim())) {
       return "API Key 只能包含 ASCII 字符；请填写厂商控制台生成的真实 Key，不要填中文备注。";
     }
+    const setupError = providerSetupValidation(currentSelectedPreset, form);
+    if (setupError) return setupError;
     if (target === "claude_desktop" && form.compat_mode === "proxy") {
       const modelMapError = validateProviderModelMap(
         providerModelMapFallback(form, currentSelectedPreset, target),
@@ -2051,9 +2069,14 @@ function App() {
         : crypto.randomUUID();
       submittedProfileId = profileId;
       const codexProfileModels = uniqueModelNames([resolvedModel, ...codexExtraModels]);
+      const savedMetadata = editingProfile && "model_metadata" in editingProfile
+        && editingProfile.base_url === codexFormForSubmit.base_url && editingProfile.api_key === codexFormForSubmit.api_key
+        ? editingProfile.model_metadata ?? [] : [];
+      const modelMetadata = (modelDiscoveryEndpoint ? discoveredModelDetails : savedMetadata)
+        .filter((model) => codexProfileModels.includes(model.id));
       const catalogJson = codexFormForSubmit.connection_mode === "official"
         ? undefined
-        : buildCodexModelCatalogPreview(codexFormForSubmit, codexProfileModels.slice(1));
+        : buildCodexModelCatalogPreview(codexFormForSubmit, codexProfileModels.slice(1), modelMetadata);
       const profile: CodexProfile = {
         id: profileId,
         display_name: name,
@@ -2067,6 +2090,7 @@ function App() {
         model: resolvedModel,
         models: codexProfileModels,
         models_user_defined: codexFormForSubmit.connection_mode !== "official",
+        model_metadata: modelMetadata,
         auth_json: resolvedAuthJson,
         config_toml: resolvedToml,
         model_catalog_json: catalogJson,
@@ -2116,11 +2140,11 @@ function App() {
         use_full_url: formForSubmit.use_full_url,
         compat_mode: submittedCompatMode,
         upstream_model: resolvedGatewayUpstreamModel,
-        vision_profile_id: formForSubmit.vision_profile_id?.trim() || undefined,
         model_map: resolvedDesktopModelMap,
         provider_model_map: resolvedProviderModelMap,
         config_options: resolvedConfigOptions,
         models: resolvedGatewayModels,
+        model_metadata: currentModelMetadata.filter((entry) => Object.values(resolvedProviderModelMap).includes(entry.id) || entry.id === resolvedGatewayUpstreamModel),
         updated_at: Date.now(),
       };
       nextState = {
@@ -2264,17 +2288,17 @@ function App() {
     }
   }
 
-  function formWithSelectedProviderModel(form: AddForm, model: string): AddForm {
+  function formWithSelectedProviderModel(form: AddForm, model: string, details = discoveredModelDetails): AddForm {
     const trimmed = model.trim();
-    if (!trimmed) return form;
+    const previousModel = target === "claude_desktop" ? form.provider_model_map?.main : form.model;
+    if (trimmed !== previousModel || details.some((entry) => entry.id === trimmed && entry.context_window != null)) {
+      form = { ...form, supports_1m_context: providerModelSupports1m(trimmed, details) };
+    }
     if (isCodexTarget(target)) {
       return { ...form, model: trimmed };
     }
     if (target === "claude_desktop") {
-      const nextProviderMap = {
-        ...providerModelMapFallback(form, currentSelectedPreset, target),
-        main: trimmed,
-      };
+      const nextProviderMap = defaultModelMap(trimmed);
       return {
         ...form,
         model: trimmed,
@@ -2322,13 +2346,13 @@ function App() {
 
   function setCodexModelList(models: string[]) {
     const [primaryModel = "", ...extraModels] = models;
-    setAddForm((form) => ({ ...form, model: primaryModel }));
+    setAddForm((form) => formWithSelectedProviderModel(form, primaryModel));
     setCodexExtraModels(extraModels);
   }
 
   function updateCodexModel(index: number, value: string) {
     if (index === 0) {
-      setAddForm((form) => ({ ...form, model: value }));
+      setAddForm((form) => formWithSelectedProviderModel(form, value));
       return;
     }
     updateCodexExtraModel(index - 1, value);
@@ -2377,6 +2401,7 @@ function App() {
       return;
     }
 
+    const requestId = ++modelDiscoveryRequest.current;
     setModelDiscoveryBusy(true);
     setModelDiscoveryEndpoint("");
     try {
@@ -2385,24 +2410,29 @@ function App() {
         addForm.api_key,
         addForm.auth_field,
       );
-      setDiscoveredProviderModels(result.models);
+      if (requestId !== modelDiscoveryRequest.current) return;
+      const details = orderProviderModels(result.details);
+      setDiscoveredModelDetails(details);
+      setDiscoveredProviderModels(details.map((model) => model.id));
       setModelDiscoveryEndpoint(result.endpoint);
-      const latestModels = isCodexTarget(target) && addForm.connection_mode !== "official"
-        ? uniqueModelNames(result.models)
-        : filterProviderModelCandidates(result.models, currentSelectedPreset);
+      const latestModels = details.map((model) => model.id);
       const currentModel = currentProviderModelValue().trim().toLowerCase();
       const shouldUpdateModel =
         Boolean(latestModels[0]) &&
         (!currentModel || !latestModels.some((model) => model.toLowerCase() === currentModel));
       if (shouldUpdateModel) {
-        setAddForm((form) => formWithSelectedProviderModel(form, latestModels[0]));
+        setAddForm((form) => formWithSelectedProviderModel(form, latestModels[0], details));
+      } else if (details.some((model) => model.id.toLowerCase() === currentModel && model.context_window != null)) {
+        setAddForm((form) => formWithSelectedProviderModel(form, currentProviderModelValue(), details));
       }
-      showStatus(`已发现 ${result.models.length} 个模型。`, "success");
+      showStatus(`已获取 ${latestModels.length} 个模型；${shouldUpdateModel ? "已选择首个可用模型" : "保留当前选择"}，可点击模型名称切换。`, "success");
     } catch (error) {
+      if (requestId !== modelDiscoveryRequest.current) return;
       setDiscoveredProviderModels([]);
+      setDiscoveredModelDetails([]);
       showStatus(`模型发现失败：${String(error)}`, "error");
     } finally {
-      setModelDiscoveryBusy(false);
+      if (requestId === modelDiscoveryRequest.current) setModelDiscoveryBusy(false);
     }
   }
 
@@ -2476,14 +2506,6 @@ function App() {
 
   const isGatewayTarget = !isCodexTarget(target);
   const isDesktopTarget = target === "claude_desktop";
-  const isDeepSeekDesktopProfile = isDesktopTarget && currentSelectedPreset?.id === "deepseek";
-  const deepSeekVisionProfileOptions = isDeepSeekDesktopProfile
-    ? (currentProfiles as GatewayProfile[]).filter((profile) =>
-        profile.id !== editingId
-        && Boolean(profile.api_key.trim())
-        && !profile.base_url.toLowerCase().includes("api.deepseek.com")
-        && (profile.api_format === "anthropic" || profile.api_format === "openai_chat"))
-    : [];
   const isGeneratedClientConfigTarget = isGatewayTarget && !isClaudeGatewayTarget(target);
   const canWriteTargetConfig = supportsNativeApply(target);
   const isOfficialAnthropicDirect = isGatewayTarget && currentSelectedPreset?.id === "anthropic";
@@ -2573,7 +2595,7 @@ function App() {
                         ? "Codex 三方模式使用专用 provider；本地网关负责记录、认证和统一启停。"
                         : "Codex 三方模式使用专用 provider；本地网关负责适配上游 Chat Completions。"
                       : "Codex 三方厂商连接使用专用 custom provider；官方 openai provider 与 auth.json 保持隔离。"
-                    : "Claude Code 仍按 Anthropic Messages 请求本地网关。预设厂商已内置协议与认证方式，通常只需要填写厂商 API Key 和模型。";
+                    : `${currentTargetMeta.title} 使用 Anthropic Messages。预设已按当前应用内置上游协议与认证方式，通常只需要填写厂商 API Key 和模型。`;
   const targetAddActionLabel = "添加配置";
   const targetEmptyAddText = `为 ${currentTargetMeta.title} 添加一条厂商配置开始使用。`;
   const targetWriteConfigLabel = canWriteTargetConfig
@@ -2591,7 +2613,7 @@ function App() {
   }
 
   function renderModelDiscoveryField(label = "上游模型") {
-    if (isOfficialCodexDirect || isAnthropicPackageDirect || isOfficialAnthropicDirect) return null;
+    if (isOfficialCodexDirect || isAnthropicPackageDirect) return null;
     const canEditCodexExtraModels = isCodexTarget(target) && addForm.connection_mode !== "official";
     return (
       <ModelDiscoveryField
@@ -2601,6 +2623,7 @@ function App() {
         modelDiscoveryBusy={modelDiscoveryBusy}
         modelDiscoveryEndpoint={modelDiscoveryEndpoint}
         providerModelCandidates={providerModelCandidates}
+        modelDetails={discoveredModelDetails}
         placeholder={currentSelectedPreset?.model_map.main || currentSelectedPreset?.models[0] || "gpt-6-astra"}
         onDiscover={() => void handleDiscoverProviderModels()}
         onChange={(nextModel) => setAddForm((form) => formWithSelectedProviderModel(form, nextModel))}
@@ -2644,6 +2667,7 @@ function App() {
     return (
       <OneMillionContextField
         checked={Boolean(addForm.supports_1m_context)}
+        disabled={discoveredModelDetails.some((model) => model.id === currentProviderModelValue() && model.context_window != null && model.context_window < 1_000_000)}
         onChange={(nextSupports1m) => {
           setAddForm((form) => ({
             ...form,
@@ -3086,9 +3110,15 @@ function App() {
                 />
               </div>
 
-              {!isOfficialCodexDirect ? (
+              {!isOfficialCodexDirect && !isAnthropicPackageDirect ? (
+                <div className="ccr-note-box">
+                  {providerSetupHints(currentSelectedPreset, target, addForm).map((hint) => <div key={hint}>{hint}</div>)}
+                  {targetProtocolSourceUrl ? <a className="ccr-helper-link" href={targetProtocolSourceUrl} target="_blank" rel="noreferrer">官方接入文档</a> : null}
+                </div>
+              ) : null}
+              {!isOfficialCodexDirect && !isAnthropicPackageDirect ? (
               <div className="ccr-edit-field">
-                <label>API Key</label>
+                <label>{selectedPreset === "modelscope" ? "Access Token" : "API Key"}</label>
                 <div className="ccr-secret-field">
                   <Input
                     type={isAnthropicPackageDirect ? "text" : showAddApiKey ? "text" : "password"}
@@ -3144,14 +3174,12 @@ function App() {
                     />
                     <span className="ccr-field-help">{targetBaseUrlHelp}</span>
                   </div>
-                <div className="ccr-note-box">
-                  {targetBaseUrlHelp}
-                </div>
                 </>
               ) : isOfficialAnthropicDirect ? (
-                <div className="ccr-note-box">
-                  Anthropic API 模式使用默认 API 地址和官方模型能力，不需要配置调用地址、模型映射或网关高级选项。
-                </div>
+                <>
+                  <div className="ccr-note-box">Anthropic API 使用官方地址，可实时获取并选择账户可用模型。</div>
+                  {renderModelDiscoveryField("官方模型")}
+                </>
               ) : (
                 <>
                   <div className="ccr-edit-field">
@@ -3364,44 +3392,10 @@ function App() {
                   </div>
                   {addForm.compat_mode === "proxy" ? (
                     <div className="ccr-note-box">
-                      左侧是 Claude Desktop profile 的模型别名；右侧填写这类请求要转发到的厂商真实模型。
+                      Claude Desktop 共用一个模型别名；选择主上游模型后，所有同名请求使用该模型。
                     </div>
                   ) : null}
-                  {isDeepSeekDesktopProfile && addForm.compat_mode === "proxy" ? (
-                    <div className="ccr-edit-field">
-                      <label>视觉代理（图片识别）</label>
-                      <select
-                        className="ccr-select"
-                        value={addForm.vision_profile_id ?? ""}
-                        onChange={(event) => setAddForm({
-                          ...addForm,
-                          vision_profile_id: event.currentTarget.value,
-                        })}
-                      >
-                        <option value="">未配置（图片请求会提示选择视觉模型）</option>
-                        {deepSeekVisionProfileOptions.map((profile) => (
-                          <option key={profile.id} value={profile.id}>
-                            {profile.display_name} · {profile.upstream_model || profile.provider_model_map?.main || profile.model_map.main}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="ccr-field-help">
-                        DeepSeek-Flash（V4.1）支持原生图片。V4-Pro 等纯文本模型可使用所选 profile 描述图片；图片会发送到该视觉模型上游。
-                        <a
-                          className="ccr-helper-link"
-                          href="https://api-docs.deepseek.com/zh-cn/quick_start/agent_integrations/github_copilot"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          官网依据
-                        </a>
-                      </span>
-                      {deepSeekVisionProfileOptions.length === 0 ? (
-                        <span className="ccr-field-help">请先在 Claude Desktop 配置列表中保存一条支持图片输入的 Anthropic 或 OpenAI Chat 视觉模型配置。</span>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {addForm.compat_mode === "proxy" ? renderModelDiscoveryField("主上游模型") : null}
+                  {renderModelDiscoveryField(isOfficialAnthropicDirect ? "官方模型" : "主上游模型")}
                   {addForm.compat_mode === "proxy" ? renderOneMillionContextField() : null}
                   <div className="ccr-model-map-rows">
                     {([
@@ -3409,7 +3403,7 @@ function App() {
                       ["opus", "Opus 默认模型"],
                       ["sonnet", "Sonnet 默认模型"],
                       ["haiku", "Haiku 默认模型"],
-                    ] as Array<[keyof ModelMap, string]>).map(([key, label]) => {
+                    ] as Array<[keyof ModelMap, string]>).filter(([key], index, rows) => rows.findIndex(([other]) => addForm.model_map[other] === addForm.model_map[key]) === index).map(([key, label]) => {
                       const providerMap = providerModelMapFallback(addForm, currentSelectedPreset, target);
                       return (
                         <div className="ccr-model-map-row" key={key}>
@@ -3430,15 +3424,7 @@ function App() {
                               placeholder={providerModelPlaceholder(key, addForm, currentSelectedPreset)}
                               value={providerMap[key]}
                               onChange={(e) => {
-                                const nextProviderMap = {
-                                  ...providerModelMapFallback(addForm, currentSelectedPreset, target),
-                                  [key]: e.currentTarget.value,
-                                };
-                                setAddForm({
-                                  ...addForm,
-                                  provider_model_map: nextProviderMap,
-                                  model: key === "main" ? e.currentTarget.value : addForm.model,
-                                });
+                                setAddForm((form) => formWithSelectedProviderModel(form, e.currentTarget.value));
                               }}
                             />
                           </div>

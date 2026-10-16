@@ -1,3 +1,5 @@
+import type { ProviderModel } from "../appTypes.ts";
+import { providerModelLabel, providerModelCapabilityLabel } from "../modelDiscovery.ts";
 import {
   closestCenter,
   DndContext,
@@ -58,6 +60,7 @@ type ModelDiscoveryFieldProps = {
   modelDiscoveryBusy: boolean;
   modelDiscoveryEndpoint: string;
   providerModelCandidates: string[];
+  modelDetails?: ProviderModel[];
   placeholder: string;
   onDiscover: () => void;
   onChange: (value: string) => void;
@@ -78,6 +81,7 @@ export function ModelDiscoveryField({
   modelDiscoveryBusy,
   modelDiscoveryEndpoint,
   providerModelCandidates,
+  modelDetails = [],
   placeholder,
   onDiscover,
   onChange,
@@ -90,12 +94,20 @@ export function ModelDiscoveryField({
   onRemoveModelAt,
   onReorderModels,
 }: ModelDiscoveryFieldProps) {
+  const [modelSearch, setModelSearch] = useState("");
+  useEffect(() => setModelSearch(""), [modelDiscoveryEndpoint]);
+  const labelFor = (id: string) => {
+    const detail = modelDetails.find((model) => model.id === id);
+    return detail ? providerModelLabel(detail) : id;
+  };
+  const visibleCandidates = providerModelCandidates.filter((model) => labelFor(model).toLowerCase().includes(modelSearch.toLowerCase()));
   const canEditExtraModels = Boolean(onAddExtraModel && onChangeExtraModel && onRemoveExtraModel);
   const canEditModelList = Boolean(onAddExtraModel && onChangeModelAt && onRemoveModelAt && onReorderModels);
   const modelValues = [value, ...extraModels];
   const [modelItemIds, setModelItemIds] = useState(() => modelValues.map(() => createModelRowId()));
   const [activeModelInputIndex, setActiveModelInputIndex] = useState(0);
   const activeCandidateValue = modelValues[activeModelInputIndex] ?? value;
+  const activeDetails = modelDetails.find((model) => model.id === activeCandidateValue);
   const modelDragSensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
@@ -158,7 +170,7 @@ export function ModelDiscoveryField({
           className="ccr-inline-sync-action"
           disabled={modelDiscoveryBusy || !apiKeyValue.trim()}
           onClick={onDiscover}
-          title="从当前模型发现地址的 /models 或 /v1/models 获取模型列表"
+          title="实时获取厂商模型列表和官方名称"
         >
           <RefreshCwIcon className="h-3 w-3" />
           {modelDiscoveryBusy ? "获取中" : "获取模型"}
@@ -267,25 +279,27 @@ export function ModelDiscoveryField({
           ))}
         </div>
       ) : null}
+      {providerModelCandidates.length > 12 ? <Input aria-label="搜索模型" placeholder="搜索模型名称或 ID" value={modelSearch} onChange={(event) => setModelSearch(event.currentTarget.value)} /> : null}
       {providerModelCandidates.length > 0 ? (
         <div className="ccr-model-candidates" aria-label="模型候选">
-          {providerModelCandidates.map((model) => (
+          {visibleCandidates.map((model) => (
             <button
               key={model}
               type="button"
               className={activeCandidateValue === model ? "ccr-model-candidate active" : "ccr-model-candidate"}
               onClick={() => handleSelectCandidate(model)}
-              title={model}
+              title={labelFor(model)}
             >
-              {model}
+              {labelFor(model)}
             </button>
           ))}
         </div>
       ) : null}
+      {activeDetails && providerModelCapabilityLabel(activeDetails) ? <span className="ccr-field-help">{providerModelCapabilityLabel(activeDetails)}</span> : null}
       <span className="ccr-field-help">
         {modelDiscoveryEndpoint
-          ? `模型列表来自 ${modelDiscoveryEndpoint}`
-          : "所有新增页都使用同一套模型发现；若厂商不开放模型端点，可直接填写模型 ID。"}
+          ? `实时模型列表来自 ${modelDiscoveryEndpoint}`
+          : "当前为内置候选，点击获取模型刷新；厂商未开放接口时可手动填写官网模型 ID。"}
       </span>
     </div>
   );

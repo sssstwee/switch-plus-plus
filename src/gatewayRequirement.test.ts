@@ -141,12 +141,6 @@ const siliconFlowClaudeProfile: GatewayProfile = {
   },
 };
 
-const googleClaudeProfile: GatewayProfile = {
-  ...baseGatewayProfile,
-  id: "profile-google",
-  display_name: "Gemini",
-  base_url: "https://generativelanguage.googleapis.com/v1beta/openai/",
-};
 
 const modelscopeClaudeProfile: GatewayProfile = {
   ...baseGatewayProfile,
@@ -255,7 +249,6 @@ equal(
   true,
 );
 notMatch(gatewayRequirementForProfile("claude_cli", chatOnlyClaudeProfile).detail, /OpenAI/);
-notMatch(gatewayRequirementForProfile("claude_cli", googleClaudeProfile).limitation ?? "", /OpenAI/);
 notMatch(gatewayRequirementForProfile("claude_cli", modelscopeClaudeProfile).limitation ?? "", /OpenAI/);
 notMatch(gatewayRequirementForProfile("codex", codexProxyProfile).limitation ?? "", /Anthropic/);
 equal(gatewayRequirementForProfile("claude_cli", baseGatewayProfile).label, "必须开启");
@@ -283,11 +276,11 @@ equal(
 );
 equal(
   gatewayRequirementForProfile("claude_cli", baseGatewayProfile).limitation,
-  "仍有限制：DeepSeek-Flash（V4.1）支持原生图片；V4-Pro 为纯文本，图片需改用 Flash 或视觉代理；文件与工具内容仍受厂商协议限制。",
+  "仍有限制：DeepSeek-Flash（V4.1）原生支持图片，图片直接发送给所选上游模型；纯文本模型请切换到支持图片的型号。",
 );
 equal(
   gatewayRequirementForProfile("claude_desktop", baseGatewayProfile).limitation,
-  "仍有限制：DeepSeek-Flash（V4.1）支持原生图片；V4-Pro 为纯文本，可在 Claude Desktop 中选择视觉代理生成图片描述；文件与工具内容仍受厂商协议限制。",
+  "仍有限制：DeepSeek-Flash（V4.1）原生支持图片，图片直接发送给所选上游模型；纯文本模型请切换到支持图片的型号。",
 );
 equal(
   gatewayRequirementForProfile("claude_cli", minimaxClaudeProfile).limitation,

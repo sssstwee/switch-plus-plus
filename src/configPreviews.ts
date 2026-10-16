@@ -1,4 +1,4 @@
-import type { AddForm, AppState, ModelMap, TargetKey, VendorPreset } from "./appTypes.ts";
+import type { AddForm, AppState, ModelMap, ProviderModel, TargetKey, VendorPreset } from "./appTypes.ts";
 import {
   CODEX_LOCAL_GATEWAY_AUTH_TOKEN,
   CODEX_LOCAL_PROXY_BASE_URL,
@@ -131,69 +131,32 @@ function writeClaudePermissionOptions(target: Record<string, unknown>, configOpt
   };
 }
 
-export function buildClaudeDesktopProfileConfigPreview(form: AddForm) {
-  if (isAnthropicOfficialPackageForm(form)) {
-    const config: Record<string, unknown> = {
-      agentSwitchClient: "Claude Desktop",
-      agentSwitchConfigRole: "profile",
-      agentSwitchRoute: "official",
-      agentSwitchOfficialAuth: "claude.ai",
-      configOptions: form.config_options,
-    };
-    writeClaudePermissionOptions(config, form.config_options);
-    return JSON.stringify(config, null, 2);
-  }
-
+export function buildClaudeDesktopProfileConfigPreview(form: AddForm, metadata: ProviderModel[] = []) {
+  if (isAnthropicOfficialPackageForm(form)) return "{}";
   const providerModelMap = form.provider_model_map ?? form.model_map;
-  if (isDirectAnthropicApiForm(form)) {
-    const config: Record<string, unknown> = {
-      agentSwitchClient: "Claude Desktop",
-      agentSwitchConfigRole: "profile",
-      agentSwitchRoute: "direct",
-      agentSwitchUpstreamBaseUrl: form.base_url,
-      coworkEgressAllowedHosts: ["*"],
-      disableDeploymentModeChooser: true,
-      inferenceProvider: "anthropic",
-      inferenceAnthropicApiKey: form.api_key,
-      inferenceModels: buildGatewayModels(providerModelMap, form.models).map((model) => ({
-        name: model.name,
-        supports1m: model.supports_1m,
-      })),
-      configOptions: form.config_options,
-      agentSwitchUpstreamModel: providerModelMap.main || form.model,
-      agentSwitchProviderModelMap: providerModelMap,
-    };
-    writeClaudePermissionOptions(config, form.config_options);
-    return JSON.stringify(config, null, 2);
-  }
-
   const usesLocalGateway = gatewayFormRequiresLocalProxy(form, "claude_desktop");
+  const directAnthropic = isDirectAnthropicApiForm(form);
+  const models = usesLocalGateway
+    ? buildGatewayModels(claudeDesktopGatewayModelMap, claudeDesktopGatewayModels, form.supports_1m_context)
+    : buildGatewayModels(providerModelMap, form.models, form.supports_1m_context);
   const config: Record<string, unknown> = {
-    agentSwitchClient: "Claude Desktop",
-    agentSwitchConfigRole: "profile",
-    agentSwitchRoute: usesLocalGateway ? "local_gateway" : "direct",
-    agentSwitchUpstreamBaseUrl: form.base_url,
     coworkEgressAllowedHosts: ["*"],
     disableDeploymentModeChooser: true,
-    inferenceModels: buildGatewayModels(claudeDesktopGatewayModelMap, claudeDesktopGatewayModels).map((model) => ({
-      name: model.name,
-      supports1m: model.supports_1m,
+    inferenceCredentialKind: "static",
+    inferenceModels: models.map((model) => ({
+      name: model.name, supports1m: model.supports_1m,
+      labelOverride: metadata.find((entry) => entry.id === (usesLocalGateway ? providerModelMap.main || form.model : model.name))?.name || (usesLocalGateway ? providerModelMap.main || form.model : model.name),
     })),
-    inferenceGatewayBaseUrl: gatewayConfigBaseUrl(form, "claude_desktop"),
-    inferenceProvider: "gateway",
-    inferenceGatewayApiFormat: form.api_format,
-    inferenceGatewayAuthField: form.auth_field,
-    configOptions: form.config_options,
-    agentSwitchUpstreamModel: providerModelMap.main || form.model || form.model_map.main,
-    agentSwitchProviderModelMap: providerModelMap,
+    inferenceProvider: directAnthropic ? "anthropic" : "gateway",
+    disableEssentialTelemetry: Boolean(form.config_options.disable_telemetry),
+    disableNonessentialTelemetry: Boolean(form.config_options.disable_telemetry || form.config_options.disable_nonessential_traffic),
+    ...(form.config_options.api_timeout_long ? {inferenceStreamIdleTimeoutSec: 600} : {}),
   };
-
-  writeClaudePermissionOptions(config, form.config_options);
-  writeGatewayApiKeyFields(config, form);
-  if (form.use_full_url) config.inferenceGatewayUseFullUrl = true;
-  if (form.note.trim()) config.inferenceGatewayNote = form.note;
-  if (form.website_url.trim()) config.inferenceGatewayWebsiteUrl = form.website_url;
-
+  if (directAnthropic) config.inferenceAnthropicApiKey = form.api_key;
+  else {
+    config.inferenceGatewayBaseUrl = gatewayConfigBaseUrl(form, "claude_desktop");
+    writeGatewayApiKeyFields(config, form);
+  }
   return JSON.stringify(config, null, 2);
 }
 
@@ -226,8 +189,6 @@ export function buildClaudeDesktopMetaConfigPreview(
 
   return JSON.stringify(
     {
-      agentSwitchClient: "Claude Desktop",
-      agentSwitchConfigRole: "profile-index",
       appliedId: state?.applied.claude_desktop ?? null,
       entries: Array.from(entries, ([id, name]) => ({ id, name })),
     },
@@ -332,7 +293,7 @@ function uniqueCodexCatalogEntries(entries: Array<{ slug: string; displayName: s
   });
 }
 
-export function buildCodexModelCatalogPreview(form: AddForm, extraModels?: string[]) {
+export function buildCodexModelCatalogPreview(form: AddForm, extraModels?: string[], metadata: ProviderModel[] = []) {
   const providerName = form.display_name || "Switch++";
   const routeDescription = form.compat_mode === "proxy"
     ? "via Switch++ local Responses gateway."
@@ -351,9 +312,12 @@ export function buildCodexModelCatalogPreview(form: AddForm, extraModels?: strin
     const isOpenAiGpt6Responses = !codexFormUsesProxy(form)
       && /^https:\/\/api\.openai\.com\/v1\/?$/i.test(form.base_url.trim())
       && /^gpt-6(?:\.\d+)*-(?:astra|sol|luna)$/i.test(displayName);
-    const isNativeVendor = isDeepSeekV4Responses || isMinimaxM31Responses;
+    const isZaiResponses = form.compat_mode === "direct" && form.api_format === "openai_responses"
+      && /^https:\/\/(?:api\.z\.ai|open\.bigmodel\.cn)\/api\/v1\/?$/i.test(form.base_url)
+      && displayName === "glm-5.3";
+    const isNativeVendor = isDeepSeekV4Responses || isMinimaxM31Responses || isZaiResponses;
     const supportsImages = (isDeepSeekV4Responses && !/pro$/i.test(displayName)) || isMinimaxM31Responses || isOpenAiGpt6Responses;
-    const contextWindow = isDeepSeekV4Responses
+    const contextWindow = isDeepSeekV4Responses || isZaiResponses
       ? 1_048_576
       : isMinimaxM31Responses ? 524_288
       : isOpenAiGpt6Responses ? (form.supports_1m_context ? 872_000 : 272_000)
@@ -362,6 +326,9 @@ export function buildCodexModelCatalogPreview(form: AddForm, extraModels?: strin
     const truncationLimit = isNativeVendor
       ? 10_000
       : Math.min(64_000, Math.max(8_000, Math.floor(contextWindow * 0.32)));
+    const live = metadata.find((model) => model.id === displayName);
+    // Official Codex catalogs can reserve a smaller client window than the raw API limit.
+    const liveContext = !isOpenAiGpt6Responses && !isMinimaxM31Responses ? live?.context_window : null;
     return {
       slug,
       display_name: displayName,
@@ -373,9 +340,9 @@ export function buildCodexModelCatalogPreview(form: AddForm, extraModels?: strin
       context_window: contextWindow,
       max_context_window: isOpenAiGpt6Responses ? 872_000 : contextWindow,
       auto_compact_token_limit: isNativeVendor ? null : compactLimit,
-      truncation_policy: { mode: "tokens", limit: truncationLimit },
-      default_reasoning_level: isDeepSeekV4Responses ? "high" : isMinimaxM31Responses ? "max" : isOpenAiGpt6Responses && displayName === "gpt-6.1-sol" ? "low" : "medium",
-      supported_reasoning_levels: isDeepSeekV4Responses
+      truncation_policy: { mode: isZaiResponses ? "bytes" : "tokens", limit: truncationLimit },
+      default_reasoning_level: isDeepSeekV4Responses ? "high" : isMinimaxM31Responses || isZaiResponses ? "max" : isOpenAiGpt6Responses && displayName === "gpt-6.1-sol" ? "low" : "medium",
+      supported_reasoning_levels: isDeepSeekV4Responses || isZaiResponses
         ? [
             { effort: "low", description: "Fast responses with lighter reasoning" },
             { effort: "high", description: "Extra high reasoning depth for complex problems" },
@@ -390,7 +357,7 @@ export function buildCodexModelCatalogPreview(form: AddForm, extraModels?: strin
           ],
       default_reasoning_summary: "none",
       reasoning_summary_format: isNativeVendor ? "experimental" : "none",
-      supports_reasoning_summaries: isMinimaxM31Responses || isOpenAiGpt6Responses,
+      supports_reasoning_summaries: isMinimaxM31Responses || isZaiResponses || isOpenAiGpt6Responses,
       default_verbosity: "low",
       support_verbosity: isDeepSeekV4Responses || isOpenAiGpt6Responses,
       apply_patch_tool_type: "freeform",
@@ -424,6 +391,10 @@ export function buildCodexModelCatalogPreview(form: AddForm, extraModels?: strin
         include_skills_usage_instructions: false,
         auto_review_model_override: null,
       } : {}),
+      ...(liveContext ? {context_window: liveContext, max_context_window: liveContext, auto_compact_token_limit: Math.floor(liveContext * 0.8)} : {}),
+      ...(live?.input_modalities.length ? {input_modalities: live.input_modalities.filter((value) => value === "text" || value === "image")} : {}),
+      ...(live?.reasoning_efforts?.length ? {supported_reasoning_levels: live.reasoning_efforts.map((effort) => ({effort, description: effort}))} : {}),
+      ...(live?.default_reasoning ? {default_reasoning_level: live.default_reasoning} : {}),
     };
   });
 
@@ -453,7 +424,7 @@ export function buildCodexConfigTomlTemplate(form: AddForm, preset: VendorPreset
   const optionParts = buildCodexConfigOptionTomlParts(sanitizeCodexConfigOptionsForForm(form, preset));
   const compatComment = codexGatewayCompatComment(form);
   const isNativeVendor = !codexFormUsesProxy(form)
-    && (preset?.id === "deepseek" || preset?.id.startsWith("minimax"));
+    && (preset?.id === "deepseek" || preset?.id.startsWith("minimax") || preset?.id.startsWith("zai-coding"));
 
   return [
     compatComment,

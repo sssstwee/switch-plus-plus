@@ -47,7 +47,6 @@ const known1mModelIds = [
   "claude-sonnet-5-5",
   "claude-haiku-5-5",
   "minimax-m3",
-  "minimax-m3-1-flash-preview",
   "glm-5-3",
   "glm-5-3-flash",
   "glm-5-3-flashx",
