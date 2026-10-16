@@ -155,6 +155,7 @@ export function syncSubscriptionProxyProfiles(
   target: SubscriptionProxyTargetKey,
   preferredModel = "",
   updatedAt = Date.now(),
+  createMissing = true,
 ): SubscriptionProxyProfileSyncResult {
   const profileId = subscriptionProxyProfileIdForTarget(target);
   const canonicalIndex = profiles.findIndex(
@@ -192,6 +193,15 @@ export function syncSubscriptionProxyProfiles(
       profiles: profiles.filter(
         (profile) => !isSubscriptionProxyProfileId(profile.id, target),
       ),
+    };
+  }
+
+  if (!existing && !createMissing) {
+    return {
+      action: "unchanged",
+      appliedProfileId: currentAppliedProfileId,
+      clearedAppliedProfile: false,
+      profiles,
     };
   }
 

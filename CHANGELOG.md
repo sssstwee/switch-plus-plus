@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.0.20 - 2026-10-16
+
+修复删除厂商配置后，重新打开应用又从旧版本数据或客户端配置中恢复的问题。
+
+### 功能亮点 / Highlights
+
+- 旧版本数据迁移及客户端自动导入仅在首次初始化配置库时执行。已有配置库（包括空列表）以用户保存的结果为准，删除与编辑结果在重启后保留。
+- 启动时不再重新创建已删除的订阅代理配置；用户主动启动或配置订阅代理时仍可生成连接配置。
+- 调整侧栏 Switch++ 名称的顶部留白，使文字到区域块上边与左边的视觉间距一致。
+
+### 界面预览 / Screenshots
+
+配置列表保留用户最后保存的内容；侧栏名称的上、左留白统一。
+
+### macOS 首次启动说明 / macOS First-Launch Notice
+
+Switch++ 尚未通过 Apple 公证（notarization）。安装到 `/Applications` 后，如被系统阻止，可运行：
+
+```bash
+sudo xattr -rd com.apple.quarantine "/Applications/Switch++.app"
+open "/Applications/Switch++.app"
+```
+
 ## v1.0.19 - 2026-10-16
 
 本版仅保留 Codex、Claude Code 和 Claude Desktop，移除其他客户端及记忆整理模块；同时修复厂商预设过时、环境检查范围过宽，以及 macOS 红绿灯与内容边框重叠的问题。

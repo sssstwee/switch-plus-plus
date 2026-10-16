@@ -126,7 +126,7 @@ equal(appCss.includes("border-radius: var(--sidebar-panel-radius);"), true);
 equal(appCss.includes("background: var(--sidebar-bg);"), true);
 equal(appCss.includes("scrollbar-width: none;"), true);
 equal(appCss.includes(".ccr-app *::-webkit-scrollbar"), true);
-equal(appCss.includes("padding: 16px 8px 14px;"), true);
+equal(appCss.includes("padding: 8px 8px 14px;"), true);
 equal(appCss.includes("padding: 16px 20px 20px"), false);
 equal(appCss.includes(".ccr-sidebar-menu"), true);
 equal(appCss.includes(".ccr-sidebar-menu {\n  display: flex;\n  flex: 1 1 auto;\n  flex-direction: column;"), true);

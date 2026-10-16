@@ -242,6 +242,7 @@ function appStateWithSubscriptionProxyProfiles(
   currentState: AppState,
   status: SubscriptionProxyStatus,
   preferredModel = "",
+  createMissing = true,
 ) {
   const sync = {
     claude_cli: syncSubscriptionProxyProfiles(
@@ -250,6 +251,8 @@ function appStateWithSubscriptionProxyProfiles(
       status,
       "claude_cli",
       preferredModel,
+      Date.now(),
+      createMissing,
     ),
     claude_desktop: syncSubscriptionProxyProfiles(
       currentState.claude_desktop,
@@ -257,6 +260,8 @@ function appStateWithSubscriptionProxyProfiles(
       status,
       "claude_desktop",
       preferredModel,
+      Date.now(),
+      createMissing,
     ),
   };
   if (Object.values(sync).every((result) => result.action === "unchanged")) {
@@ -1310,7 +1315,7 @@ function App() {
       let next = await nativeApi.loadAppState();
       try {
         const proxyStatus = await nativeApi.subscriptionProxyStatus();
-        const synced = appStateWithSubscriptionProxyProfiles(next, proxyStatus);
+        const synced = appStateWithSubscriptionProxyProfiles(next, proxyStatus, "", false);
         if (
           Object.values(synced.sync)
             .some((result) => result.action !== "unchanged")

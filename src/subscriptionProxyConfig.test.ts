@@ -230,3 +230,18 @@ test("stopped proxy removes both current and legacy Claude Desktop automatic pro
   assert.equal(removed.appliedProfileId, null);
   assert.equal(removed.clearedAppliedProfile, true);
 });
+
+
+test("startup sync preserves deleted subscription profiles until the user starts or configures the proxy", () => {
+  for (const target of ["claude_cli", "claude_desktop"] as const) {
+    const startup = syncSubscriptionProxyProfiles([], null, runningStatus, target, "", 123, false);
+    assert.equal(startup.action, "unchanged");
+    assert.deepEqual(startup.profiles, []);
+    const explicitStart = syncSubscriptionProxyProfiles([], null, runningStatus, target, "", 123);
+    assert.equal(explicitStart.action, "added");
+    assert.equal(explicitStart.profiles.length, 1);
+    const refresh = syncSubscriptionProxyProfiles(explicitStart.profiles, null, runningStatus, target, "gpt-5.4", 456, false);
+    assert.equal(refresh.action, "updated");
+    assert.equal(refresh.profiles[0].upstream_model, "gpt-5.4");
+  }
+});

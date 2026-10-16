@@ -526,7 +526,7 @@ button {
   border: 1px solid var(--sidebar-border);
   border-radius: var(--sidebar-panel-radius);
   background: var(--sidebar-bg);
-  padding: 16px 8px 14px;
+  padding: 8px 8px 14px;
   margin-left: var(--sidebar-panel-inset);
   display: flex;
   flex-direction: column;

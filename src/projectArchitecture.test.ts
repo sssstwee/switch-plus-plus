@@ -549,7 +549,7 @@ test("private core migrates legacy app state before startup import", privateCore
   assert.equal(loadAppStateSource.includes("migrate_legacy_app_state(&state_path)?;"), true);
   assert.equal(
     loadAppStateSource.indexOf("migrate_legacy_app_state(&state_path)?;") <
-      loadAppStateSource.indexOf("let mut state = if state_path.exists()"),
+      loadAppStateSource.indexOf("load_or_initialize_app_state(&state_path, import_initial_client_profiles)?;"),
     true,
   );
 });
